@@ -1,8 +1,6 @@
 import jwt
 import app.config
-import json
 import traceback
-from botocore.exceptions import ClientError
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.logging.logger import logger

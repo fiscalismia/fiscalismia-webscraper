@@ -1,14 +1,11 @@
 import logging
 import sys
 import json
-import threading
-import re
 import json
 import app.config
 from fastapi import HTTPException, status
-import app.config
 from app.colors import tty_colors
-from typing import Any, Dict, Union
+from typing import Any
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -19,7 +16,6 @@ logging.addLevelName(logging.SUCCESS, 'SUCCESS')
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that properly handles datetime objects.
 
-    AWS Boto3 responses often contain datetime objects which are not JSON serializable
     by default. This encoder converts them to ISO format strings.
     """
     def default(self, obj):

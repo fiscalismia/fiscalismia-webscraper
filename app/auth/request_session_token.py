@@ -1,7 +1,6 @@
 import jwt
 import os
 import app.config
-from app.security import retrieve_aws_secrets_manager_value
 from fastapi import APIRouter, HTTPException, status
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo

@@ -1,7 +1,9 @@
 # Git specific files
 .git
 .gitignore
-.gitlab-ci.yml
+
+# Workflows
+.github/workflows
 
 # IDE-specific folders
 .vscode/
