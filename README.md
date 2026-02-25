@@ -22,7 +22,6 @@ Backend is a very basic dockerized FastAPI server exposing routes and jwt authen
    python -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
-   python main.py
    ```
 
 3. **Environment Variables:**
@@ -40,3 +39,33 @@ Backend is a very basic dockerized FastAPI server exposing routes and jwt authen
    JWT_SECRET
    SNYK_TOKEN
    ```
+
+## Running
+
+**Locally Venv:**
+
+```bash
+   cd ~/git/fiscalismia-webscraper
+   source .venv/bin/activate
+   python main.py
+   # send queries to http://localhost:8000/hc
+```
+
+**Locally Podman:**
+
+```bash
+podman build \
+   --pull \
+   --no-cache \
+   --rm \
+   -f "Dockerfile" \
+   --build-arg BUILD_VERSION=0.9.1 \
+   -t fiscalismia-webscraper:0.9.1 \
+   "."
+podman run \
+   --env-file .env \
+   --rm -it \
+   -p 8000:8000 \
+   --name fiscalismia-webscraper \
+   fiscalismia-webscraper:0.9.1
+```
