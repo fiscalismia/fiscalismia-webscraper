@@ -1,0 +1,31 @@
+# Git specific files
+.git
+.gitignore
+.gitlab-ci.yml
+
+# IDE-specific folders
+.vscode/
+
+# Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python virtual environment
+.venv/
+
+# Documentation
+README.md
+
+# Local environment variables (if any, though .env is in your .gitignore)
+.env*
+
+# Test files and directories
+tests/
+
+# Scripts not copied into the final image
+scripts/
+
+# The boi itself
+Dockerfile

@@ -1,0 +1,5 @@
+PyJWT[crypto]
+fastapi
+uvicorn
+python-multipart
+tzdata
