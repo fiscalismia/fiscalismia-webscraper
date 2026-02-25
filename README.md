@@ -1,6 +1,7 @@
 # fiscalismia-webscraper
 Playwright browser automation running on a remote VM, exposing live recording stream of the browser interaction via WebSocket API call.
-Backend is a very basic dockerized FastAPI server exposing routes and jwt authentication
+Backend is a very basic dockerized FastAPI server exposing routes protected via jwt authentication.
+
 
 ## Setup
 

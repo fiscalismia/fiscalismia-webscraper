@@ -6,7 +6,7 @@ from app.logging.logger import logger
 #  |    /~~\ .__/  |  /~~\ |    |    |  \ \__/ \__/  |  |___
 router = APIRouter()
 
-@router.get("/test_cdp_websocket")
+@router.post("/test_cdp_websocket")
 async def health_check():
     """todo
     """

@@ -7,6 +7,7 @@
 
 # IDE-specific folders
 .vscode/
+.claude
 
 # Python bytecode and cache
 __pycache__/
@@ -19,6 +20,7 @@ __pycache__/
 
 # Documentation
 README.md
+CLAUDE.md
 
 # Local environment variables (if any, though .env is in your .gitignore)
 .env*
