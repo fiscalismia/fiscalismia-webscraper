@@ -1,7 +1,6 @@
 # fiscalismia-webscraper
-Playwright browser automation running on a remote VM, exposing live recording stream of the browser interaction via WebSocket API call
-
-
+Playwright browser automation running on a remote VM, exposing live recording stream of the browser interaction via WebSocket API call.
+Backend is a very basic dockerized FastAPI server exposing routes and jwt authentication
 
 ## Setup
 
@@ -30,7 +29,7 @@ Playwright browser automation running on a remote VM, exposing live recording st
 
    Store the `.env` in the root folder of `fiscalismia-webscraper`. Ensure that you never upload this file to Git, as it contains sensitive information!
    ```bash
-   JWT_ENCODING_SECRET=
+   JWT_SECRET=
    SNYK_TOKEN=
    ```
 
@@ -38,11 +37,6 @@ Playwright browser automation running on a remote VM, exposing live recording st
 
    Set up Github Secrets in your Repository Settings, for the pipeline to run successfully. These can and should be the same as in your `.env` file.
    ```bash
-   JWT_ENCODING_SECRET
+   JWT_SECRET
    SNYK_TOKEN
    ```
-
-
-## Developing
-
-```

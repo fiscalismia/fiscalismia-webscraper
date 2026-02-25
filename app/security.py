@@ -1,5 +1,5 @@
 import jwt
-import app.config
+import os
 import traceback
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -24,7 +24,8 @@ def decode_jwt(token: str) -> dict:
             - error_message (str|None): Error message if decoding failed, None if successful
     """
     try:
-        decoding_secret = os.environ.get("JWT_ENCODING_SECRET", None)
+        decoding_secret = os.environ.get("JWT_SECRET", None)
+        print('SECRET ' , decoding_secret)
         decoded_dict = {
             'http_status': status.HTTP_200_OK,
             'payload': jwt.decode(token, decoding_secret, algorithms=["HS256"], options={"verify_signature": True}),

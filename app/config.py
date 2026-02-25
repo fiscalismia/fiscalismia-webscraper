@@ -1,3 +1,2 @@
-FASTAPI_AUTH_ENDPOINT = "/api/fiscalismia/auth"
 FASTAPI_STREAM_ENDPOINT = "/api/fiscalismia/stream"
 FASTAPI_GLOBAL_TIMEOUT_SECONDS = 90
