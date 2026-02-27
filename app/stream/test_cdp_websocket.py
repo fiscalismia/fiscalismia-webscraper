@@ -132,6 +132,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
             except asyncio.TimeoutError:
                 # send a keepalive ping; if client is gone, this will raise
                 await websocket.send_json({"type": "keepalive"})
+                logger.debug(f"CDP session {session_id} keepalive sent to client.")
                 continue
 
             session_id_frame = params.get("sessionId", 0)
