@@ -91,4 +91,4 @@ async def cleanup_session(session_id: str):
             logger.debug(f"Closed Context for session {session_id}")
     except Exception as e:
         logger.error(f"Error closing context for session {session_id}: {e}")
-    logger.info(f"Cleaned up session {session_id} successfully.")
+    logger.success(f"Cleaned up session {session_id} successfully.")

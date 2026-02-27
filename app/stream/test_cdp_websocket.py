@@ -151,7 +151,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
                 "sessionId": session_id_frame,
             })
     except WebSocketDisconnect:
-        logger.info(f"WebSocket client disconnected from session {session_id}")
+        logger.warning(f"WebSocket client disconnected from session {session_id}")
     except Exception as e:
         logger.error(f"WebSocket error in session {session_id}: {e}")
     finally:
