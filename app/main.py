@@ -3,6 +3,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from app.health_check.hc import router as health_check_router
 from app.health_check.version import router as version_router
 from app.security import JWTBearer
@@ -24,9 +25,22 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app instance
 api = FastAPI(title = "Fiscalismia Webscraper FastAPI",
-              version = app_version,
-              timeout = app.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
-              lifespan = lifespan )
+            version = app_version,
+            timeout = app.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
+            lifespan = lifespan )
+
+# CORS middleware allowing specific origins only
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:3001", # local development
+        "http://127.0.0.1:4173", # local vite preview
+        "https://fiscalismia.com:443", # production frontend
+        "https://demo.fiscalismia.com:443", # demo frontend
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
+)
 
 # unprotected route for health checks at root path, hit from e.g. AWS resources
 api.include_router(health_check_router)
