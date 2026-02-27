@@ -208,6 +208,4 @@ __marimo__/
 
 # Active Development
 .env
-CLAUDE.md
-.claude/
 .vscode/

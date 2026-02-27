@@ -39,6 +39,11 @@ WORKDIR /app
 COPY --from=python-base /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
 COPY --from=python-base /usr/local/bin/ /usr/local/bin/
 
+# Install Chromium binary and its system-level dependencies
+RUN playwright install chromium && \
+    playwright install-deps chromium && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy Nginx configuration
 # Remove default Nginx site configuration
 RUN rm /etc/nginx/sites-enabled/default
