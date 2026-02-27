@@ -3,6 +3,6 @@ fastapi
 uvicorn
 python-multipart
 tzdata
-uvicorn
 python-dotenv
 playwright
+websockets
