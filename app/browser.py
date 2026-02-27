@@ -7,6 +7,23 @@ _browser: Browser | None = None
 # Active CDP sessions: session_id -> { page, cdp_session, context }
 sessions: dict[str, dict] = {}
 
+CHROMIUM_ARGS = [
+    "--ignore-certificate-errors",                 # bypass TLS cert validation for local/self-signed targets
+    "--autoplay-policy=no-user-gesture-required",  # allow media autoplay without user interaction
+    "--disable-background-timer-throttling",       # prevent timers throttling to 1Hz in background tabs
+    "--disable-backgrounding-occluded-windows",    # keep rendering when window is not visible
+    "--disable-renderer-backgrounding",            # prevent OS from deprioritizing the renderer process
+    "--disable-popup-blocking",                    # allow programmatic popups without suppression
+    "--no-first-run",                              # skip first-run profile setup and welcome dialog
+    "--disable-infobars",                          # suppress "Chrome is being controlled" info bar
+    "--disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies",  # disable media engagement heuristics that block autoplay
+    "--disable-gpu-vsync",                         # don't wait for vsync, uncaps frame production
+    "--disable-frame-rate-limit",                  # removes the 60fps cap on compositing
+    "--run-all-compositor-stages-before-draw",     # forces full pipeline per frame
+    "--disable-checker-imaging",                   # disables async image decode (avoids partial frames)
+    "--force-color-profile=srgb",                  # consistent encoding, avoids color-space conversion overhead
+]
+
 async def startup():
     """Launch a single headless Chromium instance at application startup."""
     global _playwright, _browser
@@ -14,7 +31,7 @@ async def startup():
     _playwright = await async_playwright().start()
     _browser = await _playwright.chromium.launch(
         headless=True,
-        args=["--ignore-certificate-errors"]
+        args=CHROMIUM_ARGS
     )
     logger.info("Chromium browser launched successfully.")
 
