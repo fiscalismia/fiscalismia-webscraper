@@ -10,7 +10,7 @@ load_dotenv()
 TOKEN = os.environ.get("TEST_BEARER_TOKEN")
 if not TOKEN:
     raise RuntimeError("TEST_BEARER_TOKEN not set in .env")
-BASE = "http://127.0.0.1:8000/api/fiscalismia/stream"
+BASE = "http://127.0.0.1:3003/api/fiscalismia/stream"
 
 async def test():
     # 1) Start a new screencast session
@@ -22,7 +22,7 @@ async def test():
             print(f"Created session: {session_id}")
 
     # 2) Connect to WebSocket (auth via query param)
-    ws_uri = f"ws://127.0.0.1:8000/api/fiscalismia/stream/{session_id}/ws?token={TOKEN}"
+    ws_uri = f"ws://127.0.0.1:3003/api/fiscalismia/stream/{session_id}/ws?token={TOKEN}"
     async with websockets.connect(ws_uri) as ws:
         frames_received = 0
         for i in range(3):

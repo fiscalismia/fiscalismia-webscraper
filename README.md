@@ -49,7 +49,7 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
    cd ~/git/fiscalismia-webscraper
    source .venv/bin/activate
    python main.py
-   # send queries to http://localhost:8000/hc
+   # send queries to http://localhost:3003/hc
 ```
 
 **Locally Podman:**
@@ -66,7 +66,7 @@ podman build \
 podman run \
    --env-file .env \
    --rm -it \
-   -p 8000:8000 \
+   -p 3003:3003 \
    --name fiscalismia-webscraper \
    fiscalismia-webscraper:0.9.1
 ```

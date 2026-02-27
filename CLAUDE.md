@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 # Run dev server
 python main.py
-# Health check: http://localhost:8000/hc
+# Health check: http://127.0.0.1:3003/hc
 ```
 
 ## Container Build & Run (Podman)
@@ -34,7 +34,7 @@ podman build --pull --no-cache --rm -f "Dockerfile" \
   --build-arg BUILD_VERSION=0.9.1 \
   -t fiscalismia-webscraper:0.9.1 "."
 
-podman run --env-file .env --rm -it -p 8000:8000 \
+podman run --env-file .env --rm -it -p 3003:3003 \
   --name fiscalismia-webscraper fiscalismia-webscraper:0.9.1
 ```
 
@@ -59,8 +59,8 @@ podman run --env-file .env --rm -it -p 8000:8000 \
 - `test_ws.py` — End-to-end integration test for the CDP streaming endpoints (POST start + WebSocket frame reception)
 
 **Container architecture:** Supervisor manages two processes:
-- Nginx (port 5000, external) → reverse proxies to Uvicorn (port 8000, internal)
-- WebSocket upgrade support and CORS headers for localhost origins (3000, 4173, 8080)
+- Nginx (port 5000, external) → reverse proxies to Uvicorn (port 3003, internal)
+- WebSocket upgrade support and CORS headers for localhost origins (3001, 4173)
 
 ## Environment Variables
 
