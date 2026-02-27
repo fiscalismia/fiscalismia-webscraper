@@ -70,3 +70,7 @@ podman run \
    --name fiscalismia-webscraper \
    fiscalismia-webscraper:0.9.1
 ```
+
+## Python Pip and Podman locally behind Windows Netskope Proxy and Artifactory
+
+INFO: Check code in private repository workbench_toolset

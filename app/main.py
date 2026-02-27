@@ -10,7 +10,6 @@ from app.logging.logger import set_global_log_level as log_level
 app_version = os.environ.get("APP_VERSION", "local-development")
 
 decoding_secret = os.environ.get("JWT_SECRET", None)
-print('main secret ' , decoding_secret)
 # Create FastAPI app instance
 api = FastAPI(title = "Fiscalismia Webscraper FastAPI",
               version = app_version,

@@ -25,7 +25,6 @@ def decode_jwt(token: str) -> dict:
     """
     try:
         decoding_secret = os.environ.get("JWT_SECRET", None)
-        print('SECRET ' , decoding_secret)
         decoded_dict = {
             'http_status': status.HTTP_200_OK,
             'payload': jwt.decode(token, decoding_secret, algorithms=["HS256"], options={"verify_signature": True}),
