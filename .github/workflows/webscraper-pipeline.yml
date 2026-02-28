@@ -41,16 +41,29 @@ jobs:
       uses: actions/checkout@v5
       # https://github.com/actions/checkout
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      # https://github.com/actions/setup-python
+      with:
+        python-version: "3.13"
+
+    - name: Install Dependencies
+      run: pip install -r requirements.txt
+
+    - name: Set up Snyk CLI
+      uses: snyk/actions/setup@master
+      # https://github.com/snyk/actions/tree/master/setup
+
     - name: Snyk Dependency Security Analysis
-      uses: snyk/actions/python@master
-      # https://github.com/snyk/actions/tree/master/python
       continue-on-error: true  # don't block the pipeline; review results in GitHub Security tab
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
-              --severity-threshold=high
-              --sarif-file-output=snyk-open-source.sarif
+      run: |
+        snyk test \
+          --file=requirements.txt \
+          --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980 \
+          --severity-threshold=high \
+          --sarif-file-output=snyk-open-source.sarif
 
     - name: Upload Snyk Open Source SARIF
       if: always()
@@ -61,16 +74,14 @@ jobs:
         category: snyk-open-source
 
     - name: Snyk Static Code Security Analysis
-      uses: snyk/actions/python@master
-      # https://github.com/snyk/actions/tree/master/python
       continue-on-error: true
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        command: code test
-        args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
-              --severity-threshold=high
-              --sarif-file-output=snyk-code.sarif
+      run: |
+        snyk code test \
+          --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980 \
+          --severity-threshold=high \
+          --sarif-file-output=snyk-code.sarif
 
     - name: Upload Snyk Code SARIF
       if: always()
