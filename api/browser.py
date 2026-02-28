@@ -1,5 +1,5 @@
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
-from app.logging.logger import logger
+from api.logging.logger import logger
 
 # Shared Playwright state
 _playwright = None

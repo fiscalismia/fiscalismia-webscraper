@@ -48,7 +48,7 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 - `config.py` — Constants (stream endpoint prefix, global timeout)
 - `security.py` — `JWTBearer` dependency class and `decode_jwt()`. Protected routes use `dependencies=[Depends(JWTBearer())]`
 - `health_check/` — Unprotected `/hc` (health status, uptime, version) and `/version` endpoints
-- `stream/` — CDP browser automation endpoints under `/api/fiscalismia/stream`:
+- `stream/` — CDP browser automation endpoints under `/fastapi/fiscalismia/stream`:
   - `test_cdp_websocket.py` — Two routers:
     - `router` (JWT-protected): `POST /start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
     - `ws_router` (unprotected, auth via query param): `WebSocket /{session_id}/ws?token=<jwt>` — streams CDP screencast frames (base64 JPEG) over WebSocket

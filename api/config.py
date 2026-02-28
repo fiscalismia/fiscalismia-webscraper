@@ -1,4 +1,4 @@
-FASTAPI_STREAM_ENDPOINT = "/api/fiscalismia/stream"
+FASTAPI_STREAM_ENDPOINT = "/fastapi/fiscalismia/stream"
 FASTAPI_GLOBAL_TIMEOUT_SECONDS = 90
 
 # CDP screencast parameters (used by Page.startScreencast)

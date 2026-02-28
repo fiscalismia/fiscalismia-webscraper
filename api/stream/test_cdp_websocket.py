@@ -2,10 +2,10 @@ import asyncio
 import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query, status
 from pydantic import BaseModel
-from app.logging.logger import logger
-from app.security import decode_jwt
-from app import browser
-from app.config import (
+from api.logging.logger import logger
+from api.security import decode_jwt
+from api import browser
+from api.config import (
     CDP_SCREENCAST_FORMAT,
     CDP_SCREENCAST_QUALITY,
     CDP_SCREENCAST_MAX_WIDTH,

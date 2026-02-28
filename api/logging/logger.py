@@ -2,9 +2,8 @@ import logging
 import sys
 import json
 import json
-import app.config
 from fastapi import HTTPException, status
-from app.colors import tty_colors
+from api.colors import tty_colors
 from typing import Any
 from datetime import datetime
 from zoneinfo import ZoneInfo

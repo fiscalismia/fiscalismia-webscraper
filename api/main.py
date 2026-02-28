@@ -1,16 +1,16 @@
-import app.config
+import api.config
 import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from app.health_check.hc import router as health_check_router
-from app.health_check.version import router as version_router
-from app.security import JWTBearer
-from app.stream.test_cdp_websocket import router as test_cdp_websocket_router
-from app.stream.test_cdp_websocket import ws_router as test_cdp_ws_router
-from app.logging.logger import set_global_log_level as log_level
-from app import browser
+from api.health_check.hc import router as health_check_router
+from api.health_check.version import router as version_router
+from api.security import JWTBearer
+from api.stream.test_cdp_websocket import router as test_cdp_websocket_router
+from api.stream.test_cdp_websocket import ws_router as test_cdp_ws_router
+from api.logging.logger import set_global_log_level as log_level
+from api import browser
 
 app_version = os.environ.get("APP_VERSION", "local-development")
 
@@ -24,13 +24,13 @@ async def lifespan(app: FastAPI):
     await browser.shutdown()
 
 # Create FastAPI app instance
-api = FastAPI(title = "Fiscalismia Webscraper FastAPI",
+fastapi = FastAPI(title = "Fiscalismia Webscraper FastAPI",
             version = app_version,
-            timeout = app.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
+            timeout = api.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
             lifespan = lifespan )
 
 # CORS middleware allowing specific origins only
-api.add_middleware(
+fastapi.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:3001", # local development
@@ -43,16 +43,16 @@ api.add_middleware(
 )
 
 # unprotected route for health checks at root path, hit from e.g. AWS resources
-api.include_router(health_check_router)
-api.include_router(version_router)
+fastapi.include_router(health_check_router)
+fastapi.include_router(version_router)
 
 #   __   __   __  ___  ___  __  ___  ___  __      __   __       ___  ___  __
 #  |__) |__) /  \  |  |__  /  `  |  |__  |  \    |__) /  \ |  |  |  |__  /__`
 #  |    |  \ \__/  |  |___ \__,  |  |___ |__/    |  \ \__/ \__/  |  |___ .__/
 # see https://testdriven.io/blog/fastapi-jwt-auth/
-api.include_router(test_cdp_websocket_router, dependencies=[Depends(JWTBearer())], prefix = app.config.FASTAPI_STREAM_ENDPOINT)
+fastapi.include_router(test_cdp_websocket_router, dependencies=[Depends(JWTBearer())], prefix = api.config.FASTAPI_STREAM_ENDPOINT)
 # WebSocket router: JWT validated via query param inside the handler (HTTPBearer doesn't support WebSocket)
-api.include_router(test_cdp_ws_router, prefix = app.config.FASTAPI_STREAM_ENDPOINT)
+fastapi.include_router(test_cdp_ws_router, prefix = api.config.FASTAPI_STREAM_ENDPOINT)
 
 # Set Log Level for Backend Logs (replacing print statements to stdout)
 log_level(logging.DEBUG)

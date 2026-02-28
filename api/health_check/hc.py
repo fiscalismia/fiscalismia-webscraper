@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 import math
 import socket
 import os
-from app.logging.logger import logger
+from api.logging.logger import logger
 
 #   ___       __  ___       __        __   __       ___  ___
 #  |__   /\  /__`  |   /\  |__) |    |__) /  \ |  |  |  |__

@@ -53,8 +53,8 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy application code
-COPY main.py .
-COPY app/ ./app/
+COPY main.py /app/main.py
+COPY api/ /app/api/
 
 # Start Supervisor to manage Nginx and Uvicorn
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

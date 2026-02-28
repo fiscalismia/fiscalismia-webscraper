@@ -3,7 +3,7 @@ import os
 import traceback
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.logging.logger import logger
+from api.logging.logger import logger
 
 #            ___    ___  __        ___       __
 #     | |  |  |      |  /  \ |__/ |__  |\ | /__`

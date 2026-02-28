@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter
-from app.logging.logger import logger
+from api.logging.logger import logger
 
 # Read the build version from the environment variable
 # Provide a default value for local development
