@@ -29,7 +29,8 @@ jobs:
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        args: --severity-threshold=high
+        args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
+              ---severity-threshold=high
               --sarif-file-output=snyk-open-source.sarif
 
     - name: Upload Snyk Open Source SARIF
@@ -47,7 +48,8 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         command: code test
-        args: --severity-threshold=high
+        args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
+              ---severity-threshold=high
               --sarif-file-output=snyk-code.sarif
 
     - name: Upload Snyk Code SARIF
@@ -197,7 +199,8 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         image: ghcr.io/fiscalismia/fiscalismia-webscraper:latest
-        args: --file=Dockerfile
+        args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
+              --file=Dockerfile
               --severity-threshold=high
 
     - name: Upload Snyk Container SARIF
