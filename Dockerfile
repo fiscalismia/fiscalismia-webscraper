@@ -24,8 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.13-slim
 
 # add non priviledged system users to run their respective services
-RUN addgroup -g 101 -S nginx && adduser -S -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
-RUN addgroup -g 1001 -S python && adduser -S -H -u 1001 -s /sbin/nologin -G python python
+RUN addgroup --gid 101 --system nginx && adduser --system --no-create-home --uid 101 --home /var/cache/nginx --shell /sbin/nologin --ingroup nginx nginx
+RUN addgroup --gid 1001 --system python && adduser --system --no-create-home --uid 1001 --shell /sbin/nologin --ingroup python python
 
 # Set working directory
 WORKDIR /app
