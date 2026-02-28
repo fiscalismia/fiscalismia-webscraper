@@ -18,22 +18,21 @@ jobs:
       uses: actions/checkout@v5
       # https://github.com/actions/checkout
 
-    - name: Install dependencies
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
+    - name: Snyk Static Code Security Analysis
+      uses: snyk/actions/python@master
+      # https://github.com/snyk/actions/tree/master/python
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: code test
 
-    # - name: Snyk Static Code Security Analysis
-    #   env:
-    #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-    #   run: |
-    #     snyk auth $SNYK_TOKEN
-    #     snyk ignore --file-path=src/tests/supertest_read_write_api.test.ts
-    #     npm run snykCodeAnalysis
-
-    # - name: Snyk Dependency Security Analysis
-    #   run: npm run snykDependencyAnalysis
+    - name: Snyk Dependency Security Analysis
+      uses: snyk/actions/python@master
+      # https://github.com/snyk/actions/tree/master/python
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   build-and-publish-image:
     runs-on: ubuntu-latest
