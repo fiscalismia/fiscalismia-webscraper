@@ -1,0 +1,139 @@
+name: Fiscalismia-Webscraper Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - pipeline_testing
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout SCM
+      uses: actions/checkout@v5
+      # https://github.com/actions/checkout
+
+    - name: Install dependencies
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install -r requirements.txt
+
+    # - name: Snyk Static Code Security Analysis
+    #   env:
+    #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    #   run: |
+    #     snyk auth $SNYK_TOKEN
+    #     snyk ignore --file-path=src/tests/supertest_read_write_api.test.ts
+    #     npm run snykCodeAnalysis
+
+    # - name: Snyk Dependency Security Analysis
+    #   run: npm run snykDependencyAnalysis
+
+  build-and-publish-image:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+      packages: write # to publish to ghcr.io
+
+    steps:
+    - name: Checkout SCM
+      uses: actions/checkout@v5
+      # https://github.com/actions/checkout
+
+    - name: AutoIncrement Version
+      run: |
+        echo "BUILD_VERSION=0.9.1" >> $GITHUB_ENV
+
+    - name: Set Buildah Build Timestamp
+      shell: bash
+      run: |
+        # Store the current time in ISO 8601 format (required by OCI spec)
+        echo "BUILD_TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+
+    - name: Buildah Image Creation - Demo
+      id: build-demo-image
+      uses: redhat-actions/buildah-build@v2.13
+      # https://github.com/redhat-actions/buildah-build/releases
+      with:
+        image: fiscalismia-webscraper-demo
+        tags: latest ${{ env.BUILD_VERSION }}
+        containerfiles: |
+          ./Dockerfile
+        build-args: |
+          BUILD_VERSION=${{ env.BUILD_VERSION }}
+        labels: |
+          org.opencontainers.image.version=${{ env.BUILD_VERSION }}
+          org.opencontainers.image.created=${{ env.BUILD_TIMESTAMP }}
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.description=Demo Image for Webscraping with Python Playwright FastAPI Server for Fiscalismia, a Web Service for visualizing, analyzing, aggregating, importing and exporting personal finance data.
+          org.opencontainers.image.licenses=MIT
+
+    - name: Buildah Image Creation - Production
+      id: build-production-image
+      uses: redhat-actions/buildah-build@v2.13
+      # https://github.com/redhat-actions/buildah-build/releases
+      with:
+        image: fiscalismia-webscraper
+        tags: latest ${{ env.BUILD_VERSION }}
+        containerfiles: |
+          ./Dockerfile
+        build-args: |
+          BUILD_VERSION=${{ env.BUILD_VERSION }}
+        labels: |
+          org.opencontainers.image.version=${{ env.BUILD_VERSION }}
+          org.opencontainers.image.created=${{ env.BUILD_TIMESTAMP }}
+          org.opencontainers.image.source=${{ github.repositoryUrl }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.description=Production Image for Webscraping with Python Playwright FastAPI Server for Fiscalismia, a Web Service for visualizing, analyzing, aggregating, importing and exporting personal finance data
+          org.opencontainers.image.licenses=MIT
+
+    - name: Log in to Github Container Registry
+      if: github.event_name == 'push'
+      uses: redhat-actions/podman-login@v1.7
+      # https://github.com/redhat-actions/podman-login/releases
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push Demo Image to GHCR
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: push-demo-to-ghcr
+      uses: redhat-actions/push-to-registry@v2.8
+      # https://github.com/redhat-actions/push-to-registry/releases
+      with:
+        image: ${{ steps.build-demo-image.outputs.image }}
+        tags: ${{ steps.build-demo-image.outputs.tags }}
+        registry: ghcr.io/fiscalismia
+
+    - name: Push Production Image to GHCR
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: push-prod-to-ghcr
+      uses: redhat-actions/push-to-registry@v2.8
+      # https://github.com/redhat-actions/push-to-registry/releases
+      with:
+        image: ${{ steps.build-production-image.outputs.image }}
+        tags: ${{ steps.build-production-image.outputs.tags }}
+        registry: ghcr.io/fiscalismia
+
+    - name: Print image url
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Production Image pushed to ${{ steps.push-prod-to-ghcr.outputs.registry-paths }}"
+        echo "Demo Image pushed to ${{ steps.push-demo-to-ghcr.outputs.registry-paths }}"
+
+    - name: Print build success (PR)
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Build successful for PR"
+        echo "Demo Image would be: ${{ steps.build-demo-image.outputs.image }}:${{ steps.build-demo-image.outputs.tags }}"
+        echo "Production Image would be: ${{ steps.build-production-image.outputs.image }}:${{ steps.build-production-image.outputs.tags }}"
