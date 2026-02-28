@@ -97,6 +97,7 @@ jobs:
     - name: Read Version from pyproject.toml
       run: |
         VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+        echo "pyproject Version is $VERSION"
         echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Set Buildah Build Timestamp
@@ -199,11 +200,6 @@ jobs:
     - name: Checkout SCM
       uses: actions/checkout@v5
       # https://github.com/actions/checkout
-
-    # # Authenticate so Snyk can pull the image from GHCR
-    # - name: Log in to Github Container Registry
-    #   run: |
-    #     echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
     - name: Log in to Github Container Registry
       uses: redhat-actions/podman-login@v1.7
