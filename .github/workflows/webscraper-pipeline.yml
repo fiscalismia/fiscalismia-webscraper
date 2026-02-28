@@ -10,13 +10,34 @@ on:
       - main
 
 jobs:
-  test-and-security-scan:
+  snyk-security-scan:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write  # required for SARIF upload to GitHub Code Scanning
 
     steps:
     - name: Checkout SCM
       uses: actions/checkout@v5
       # https://github.com/actions/checkout
+
+    - name: Snyk Dependency Security Analysis
+      uses: snyk/actions/python@master
+      # https://github.com/snyk/actions/tree/master/python
+      continue-on-error: true  # don't block the pipeline; review results in GitHub Security tab
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+              --sarif-file-output=snyk-open-source.sarif
+
+    - name: Upload Snyk Open Source SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: snyk-open-source.sarif
+        category: snyk-open-source
 
     - name: Snyk Static Code Security Analysis
       uses: snyk/actions/python@master
@@ -26,13 +47,15 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         command: code test
+        args: --severity-threshold=high
+              --sarif-file-output=snyk-code.sarif
 
-    - name: Snyk Dependency Security Analysis
-      uses: snyk/actions/python@master
-      # https://github.com/snyk/actions/tree/master/python
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - name: Upload Snyk Code SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: snyk-code.sarif
+        category: snyk-code
 
   build-and-publish-image:
     runs-on: ubuntu-latest
@@ -136,3 +159,50 @@ jobs:
         echo "Build successful for PR"
         echo "Demo Image would be: ${{ steps.build-demo-image.outputs.image }}:${{ steps.build-demo-image.outputs.tags }}"
         echo "Production Image would be: ${{ steps.build-production-image.outputs.image }}:${{ steps.build-production-image.outputs.tags }}"
+
+  snyk-container-scan:
+    needs: build-and-publish-image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read          # to pull from ghcr.io
+      security-events: write  # required for SARIF upload to GitHub Code Scanning
+
+    steps:
+    - name: Checkout SCM
+      uses: actions/checkout@v5
+      # https://github.com/actions/checkout
+
+    # # Authenticate so Snyk can pull the image from GHCR
+    # - name: Log in to Github Container Registry
+    #   run: |
+    #     echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - name: Log in to Github Container Registry
+      uses: redhat-actions/podman-login@v1.7
+      # https://github.com/redhat-actions/podman-login/releases
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Snyk Container Analysis - Production Image
+      uses: snyk/actions/docker@master
+      # https://github.com/snyk/actions/tree/master/docker
+      # https://docs.snyk.io/developer-tools/snyk-ci-cd-integrations/github-actions-for-snyk-setup-and-checking-for-vulnerabilities/snyk-docker-action
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        image: ghcr.io/fiscalismia/fiscalismia-webscraper:latest
+        args: --file=Dockerfile
+              --severity-threshold=high
+
+    - name: Upload Snyk Container SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: snyk.sarif
+        category: snyk-container
