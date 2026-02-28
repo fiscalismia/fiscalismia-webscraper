@@ -10,6 +10,25 @@ on:
       - main
 
 jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout SCM
+      uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      # https://github.com/actions/setup-python
+      with:
+        python-version: "3.13"
+
+    - name: Install Ruff
+      run: pip install ruff
+
+    - name: Check formatting with Ruff
+      run: ruff format --check .
+
   snyk-security-scan:
     runs-on: ubuntu-latest
 
@@ -62,6 +81,7 @@ jobs:
         category: snyk-code
 
   build-and-publish-image:
+    needs: code-quality
     runs-on: ubuntu-latest
 
     permissions:

@@ -11,7 +11,8 @@ app_version = os.environ.get("APP_VERSION", "local-development")
 #  |    /~~\ .__/  |  /~~\ |    |    |  \ \__/ \__/  |  |___
 router = APIRouter()
 
+
 @router.get("/version")
 async def get_version():
-    """Returns the application's build version."""
-    return {"app_version": app_version}
+  """Returns the application's build version."""
+  return {"app_version": app_version}

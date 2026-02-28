@@ -16,30 +16,34 @@ app_version = os.environ.get("APP_VERSION", "local-development")
 
 decoding_secret = os.environ.get("JWT_SECRET", None)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage Playwright browser lifecycle: launch on startup, close on shutdown."""
-    await browser.startup()
-    yield
-    await browser.shutdown()
+  """Manage Playwright browser lifecycle: launch on startup, close on shutdown."""
+  await browser.startup()
+  yield
+  await browser.shutdown()
+
 
 # Create FastAPI app instance
-fastapi = FastAPI(title = "Fiscalismia Webscraper FastAPI",
-            version = app_version,
-            timeout = api.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
-            lifespan = lifespan )
+fastapi = FastAPI(
+  title="Fiscalismia Webscraper FastAPI",
+  version=app_version,
+  timeout=api.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
+  lifespan=lifespan,
+)
 
 # CORS middleware allowing specific origins only
 fastapi.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:3001", # local development
-        "http://127.0.0.1:4173", # local vite preview
-        "https://fiscalismia.com:443", # production frontend
-        "https://demo.fiscalismia.com:443", # demo frontend
-    ],
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "Accept"],
+  CORSMiddleware,
+  allow_origins=[
+    "http://127.0.0.1:3001",  # local development
+    "http://127.0.0.1:4173",  # local vite preview
+    "https://fiscalismia.com:443",  # production frontend
+    "https://demo.fiscalismia.com:443",  # demo frontend
+  ],
+  allow_methods=["GET", "POST", "OPTIONS"],
+  allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 # unprotected route for health checks at root path, hit from e.g. AWS resources
@@ -50,9 +54,11 @@ fastapi.include_router(version_router)
 #  |__) |__) /  \  |  |__  /  `  |  |__  |  \    |__) /  \ |  |  |  |__  /__`
 #  |    |  \ \__/  |  |___ \__,  |  |___ |__/    |  \ \__/ \__/  |  |___ .__/
 # see https://testdriven.io/blog/fastapi-jwt-auth/
-fastapi.include_router(test_cdp_websocket_router, dependencies=[Depends(JWTBearer())], prefix = api.config.FASTAPI_STREAM_ENDPOINT)
+fastapi.include_router(
+  test_cdp_websocket_router, dependencies=[Depends(JWTBearer())], prefix=api.config.FASTAPI_STREAM_ENDPOINT
+)
 # WebSocket router: JWT validated via query param inside the handler (HTTPBearer doesn't support WebSocket)
-fastapi.include_router(test_cdp_ws_router, prefix = api.config.FASTAPI_STREAM_ENDPOINT)
+fastapi.include_router(test_cdp_ws_router, prefix=api.config.FASTAPI_STREAM_ENDPOINT)
 
 # Set Log Level for Backend Logs (replacing print statements to stdout)
 log_level(logging.DEBUG)

@@ -1,6 +1,7 @@
 """
 Fiscalismia Webscraper FastAPI
 """
+
 # Versioning Scheme: major.minor.build
 # - The major and minor versions (e.g., "0.9") are updated manually in this file.
 # - The ".replace_me" placeholder is dynamically replaced by the GitLab CI pipeline's

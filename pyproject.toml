@@ -1,0 +1,7 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+indent-width = 2
+
+[tool.ruff.format]
+indent-style = "space"

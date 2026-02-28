@@ -208,7 +208,6 @@ __marimo__/
 
 # Active Development
 .env
-.vscode/
 copilot-instructions.txt
 wrapt-2.1.1-py3-none-any.whl
 pip_system_certs-5.3-py3-none-any.whl
