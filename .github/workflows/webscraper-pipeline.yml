@@ -30,12 +30,13 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
-              ---severity-threshold=high
+              --severity-threshold=high
               --sarif-file-output=snyk-open-source.sarif
 
     - name: Upload Snyk Open Source SARIF
       if: always()
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
+      # https://docs.github.com/en/code-security/how-tos/scan-code-for-vulnerabilities/integrate-with-existing-tools/uploading-a-sarif-file-to-github
       with:
         sarif_file: snyk-open-source.sarif
         category: snyk-open-source
@@ -49,12 +50,13 @@ jobs:
       with:
         command: code test
         args: --org=fcdd9ceb-9451-4b30-a447-8d8f9ffa2980
-              ---severity-threshold=high
+              --severity-threshold=high
               --sarif-file-output=snyk-code.sarif
 
     - name: Upload Snyk Code SARIF
       if: always()
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
+      # https://docs.github.com/en/code-security/how-tos/scan-code-for-vulnerabilities/integrate-with-existing-tools/uploading-a-sarif-file-to-github
       with:
         sarif_file: snyk-code.sarif
         category: snyk-code
@@ -205,7 +207,8 @@ jobs:
 
     - name: Upload Snyk Container SARIF
       if: always()
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
+      # https://docs.github.com/en/code-security/how-tos/scan-code-for-vulnerabilities/integrate-with-existing-tools/uploading-a-sarif-file-to-github
       with:
         sarif_file: snyk.sarif
         category: snyk-container
