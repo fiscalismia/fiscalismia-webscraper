@@ -41,6 +41,15 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
    SNYK_TOKEN
    ```
 
+5. **Linter and Formatter**
+
+   We use **RUFF** which is faster, less opinionated and more configurable than black.
+   The ruff VSCode extension formats automatically on saving files. Get it here https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff
+
+   The formatOnSave settings are persisted in `.vscode/settings.json`.
+
+   INFO: The pipeline enforces this formatting and fails on mismatches.
+
 ## Running
 
 **Locally Venv:**
