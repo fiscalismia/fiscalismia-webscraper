@@ -37,13 +37,21 @@ def decode_jwt(token: str) -> dict:
     raise
   except jwt.ExpiredSignatureError as e:
     logger.error(f"=== JWT DECODE FAILED ===\nExpiredSignatureError: {str(e)}\nToken that failed: {token}")
-    return {"http_status": status.HTTP_403_FORBIDDEN, "payload": None, "error_message": str(e)}
+    return {
+      "http_status": status.HTTP_403_FORBIDDEN,
+      "payload": None,
+      "error_message": f"ExpiredSignatureError: {str(e)}",
+    }
   except jwt.InvalidSignatureError as e:
     logger.error(f"=== JWT DECODE FAILED ===\nInvalidSignatureError: {str(e)}\nToken that failed: {token}")
-    return {"http_status": status.HTTP_403_FORBIDDEN, "payload": None, "error_message": str(e)}
+    return {
+      "http_status": status.HTTP_403_FORBIDDEN,
+      "payload": None,
+      "error_message": f"InvalidSignatureError: {str(e)}",
+    }
   except jwt.DecodeError as e:
     logger.error(f"=== JWT DECODE FAILED ===\nDecodeError: {str(e)}\nToken that failed: {token}")
-    return {"http_status": status.HTTP_403_FORBIDDEN, "payload": None, "error_message": str(e)}
+    return {"http_status": status.HTTP_403_FORBIDDEN, "payload": None, "error_message": f"DecodeError: {str(e)}"}
   except Exception as e:
     logger.error(
       f"=== JWT DECODE FAILED ===\n"
