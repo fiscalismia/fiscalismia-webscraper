@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import api.config
 import math
 import socket
 import os
@@ -28,7 +29,7 @@ async def health_check():
     "status": "healthy",
     "app_version": app_version,
     "service": "fiscalismia-webscraper",
-    "purpose": "Unix Backend REST API for Live Webscraping",
+    "purpose": "Python FastAPI /w Playwright Browser for Live Webscraping",
     "timestamp": datetime.now(tz=ZoneInfo("Europe/Berlin")),
     "hostname": socket.gethostname(),
     "uptime_hours": uptime_hours,
@@ -40,5 +41,5 @@ async def health_check():
 async def root_info():
   """Responds with status 200 to GET requests and a message to instead query the /hc route"""
   return {
-    "message": "Hit /hc route instead for a proper health check.",
+    "message": f"Hit {api.config.BASE_ROUTE}/hc route instead for a proper health check.",
   }

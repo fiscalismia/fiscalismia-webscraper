@@ -7,13 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.health_check.hc import router as health_check_router
 from api.health_check.version import router as version_router
 from api.security import JWTBearer
-from api.stream.test_cdp_websocket import router as test_cdp_websocket_router
-from api.stream.test_cdp_websocket import ws_router as test_cdp_ws_router
+from api.stream.test_cdp_websocket import router as test_cdp_rest_router
+from api.stream.test_cdp_websocket import ws_router as test_cdp_websocket_router
 from api.logging.logger import set_global_log_level as log_level
 from api import browser
 
 app_version = os.environ.get("APP_VERSION", "local-development")
-
 decoding_secret = os.environ.get("JWT_SECRET", None)
 
 
@@ -47,18 +46,20 @@ fastapi.add_middleware(
 )
 
 # unprotected route for health checks at root path, hit from e.g. AWS resources
-fastapi.include_router(health_check_router)
-fastapi.include_router(version_router)
+fastapi.include_router(health_check_router, prefix=f"{api.config.BASE_ROUTE}")
+fastapi.include_router(version_router, prefix=f"{api.config.BASE_ROUTE}")
 
 #   __   __   __  ___  ___  __  ___  ___  __      __   __       ___  ___  __
 #  |__) |__) /  \  |  |__  /  `  |  |__  |  \    |__) /  \ |  |  |  |__  /__`
 #  |    |  \ \__/  |  |___ \__,  |  |___ |__/    |  \ \__/ \__/  |  |___ .__/
 # see https://testdriven.io/blog/fastapi-jwt-auth/
 fastapi.include_router(
-  test_cdp_websocket_router, dependencies=[Depends(JWTBearer())], prefix=api.config.FASTAPI_STREAM_ENDPOINT
+  test_cdp_rest_router,
+  dependencies=[Depends(JWTBearer())],
+  prefix=f"{api.config.BASE_ROUTE}{api.config.STREAM_ENDPOINT}",
 )
 # WebSocket router: JWT validated via query param inside the handler (HTTPBearer doesn't support WebSocket)
-fastapi.include_router(test_cdp_ws_router, prefix=api.config.FASTAPI_STREAM_ENDPOINT)
+fastapi.include_router(test_cdp_websocket_router, prefix=f"{api.config.BASE_ROUTE}{api.config.STREAM_ENDPOINT}")
 
 # Set Log Level for Backend Logs (replacing print statements to stdout)
 log_level(logging.DEBUG)
