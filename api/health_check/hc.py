@@ -5,7 +5,6 @@ import api.config
 import math
 import socket
 import os
-from api.logging.logger import logger
 
 #   ___       __  ___       __        __   __       ___  ___
 #  |__   /\  /__`  |   /\  |__) |    |__) /  \ |  |  |  |__
@@ -34,12 +33,4 @@ async def health_check():
     "hostname": socket.gethostname(),
     "uptime_hours": uptime_hours,
     "uptime_seconds": uptime_seconds,
-  }
-
-
-@router.get("/")
-async def root_info():
-  """Responds with status 200 to GET requests and a message to instead query the /hc route"""
-  return {
-    "message": f"Hit {api.config.BASE_ROUTE}/hc route instead for a proper health check.",
   }

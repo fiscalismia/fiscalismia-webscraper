@@ -4,6 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from api.health_check.root_info import router as root_info_router
 from api.health_check.hc import router as health_check_router
 from api.health_check.version import router as version_router
 from api.security import JWTBearer
@@ -46,6 +47,7 @@ fastapi.add_middleware(
 )
 
 # unprotected route for health checks at root path, hit from e.g. AWS resources
+fastapi.include_router(root_info_router)
 fastapi.include_router(health_check_router, prefix=f"{api.config.BASE_ROUTE}")
 fastapi.include_router(version_router, prefix=f"{api.config.BASE_ROUTE}")
 
