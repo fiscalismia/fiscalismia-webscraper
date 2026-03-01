@@ -69,8 +69,8 @@ podman build \
    --no-cache \
    --rm \
    -f "Dockerfile" \
-   --build-arg BUILD_VERSION=0.9.1 \
-   -t fiscalismia-webscraper:0.9.1 \
+   --build-arg BUILD_VERSION=0.9.2 \
+   -t fiscalismia-webscraper:0.9.2 \
    "."
 # nginx listens at port 5000
 podman run \
@@ -78,7 +78,7 @@ podman run \
    --rm -it \
    -p 3003:3003 \
    --name fiscalismia-webscraper \
-   fiscalismia-webscraper:0.9.1
+   fiscalismia-webscraper:0.9.2
 ```
 
 ## Python Pip and Podman locally behind Windows Netskope Proxy and Artifactory

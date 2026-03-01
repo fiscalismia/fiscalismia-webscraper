@@ -31,11 +31,11 @@ python main.py
 
 ```bash
 podman build --pull --no-cache --rm -f "Dockerfile" \
-  --build-arg BUILD_VERSION=0.9.1 \
-  -t fiscalismia-webscraper:0.9.1 "."
+  --build-arg BUILD_VERSION=0.9.2 \
+  -t fiscalismia-webscraper:0.9.2 "."
 
 podman run --env-file .env --rm -it -p 3003:3003 \
-  --name fiscalismia-webscraper fiscalismia-webscraper:0.9.1
+  --name fiscalismia-webscraper fiscalismia-webscraper:0.9.2
 ```
 
 ## Architecture
