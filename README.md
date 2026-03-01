@@ -76,7 +76,7 @@ podman build \
 podman run \
    --env-file .env \
    --rm -it \
-   -p 3003:5000 \
+   -p 3003:3003 \
    --name fiscalismia-webscraper \
    fiscalismia-webscraper:0.9.1
 ```

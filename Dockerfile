@@ -43,6 +43,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends nginx superviso
 COPY --from=python-base /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
 COPY --from=python-base /usr/local/bin/ /usr/local/bin/
 
+# Use a shared, user-agnostic path so the unprivileged python user can find the browser at runtime
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+
 # Install Chromium binary and its system-level dependencies
 RUN playwright install chromium && \
     playwright install-deps chromium && \
