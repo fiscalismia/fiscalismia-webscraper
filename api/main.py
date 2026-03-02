@@ -39,8 +39,8 @@ fastapi.add_middleware(
   allow_origins=[
     "http://127.0.0.1:3001",  # local development
     "http://127.0.0.1:4173",  # local vite preview
-    "https://fiscalismia.com:443",  # production frontend
-    "https://demo.fiscalismia.com:443",  # demo frontend
+    "https://fiscalismia.com",  # production frontend
+    "https://demo.fiscalismia.com",  # demo frontend
   ],
   allow_methods=["GET", "POST", "OPTIONS"],
   allow_headers=["Content-Type", "Authorization", "Accept"],
