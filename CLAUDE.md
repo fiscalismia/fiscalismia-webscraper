@@ -9,8 +9,9 @@ Fiscalismia Webscraper is a FastAPI backend for Playwright browser automation on
 ## Tech Stack
 
 - **Language:** Python 3.13+
-- **Framework:** FastAPI with Uvicorn (ASGI)
+- **Framework:** FastAPI with Uvicorn (ASGI) + uvloop event loop
 - **Auth:** PyJWT (HS256 Bearer tokens)
+- **Browser Automation:** Playwright (headless Chromium, CDP screencast)
 - **Deployment:** Podman/Docker, Nginx reverse proxy, Supervisor process manager
 - **Config:** python-dotenv (.env file)
 
@@ -40,27 +41,33 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 
 ## Architecture
 
-**Entry point:** `main.py` → runs `uvicorn` loading `api.main:api`
+**Entry point:** `main.py` → runs `uvicorn` with uvloop loading `api.main:fastapi`
 
 **App structure (`api/`):**
 - `main.py` — FastAPI app factory, registers routers with prefix/dependency injection, lifespan context manager for Playwright browser lifecycle
 - `browser.py` — Playwright browser lifecycle manager. Launches a single shared headless Chromium at startup, exposes `new_page()` for creating contexts/pages, tracks active CDP sessions, and cleans up on shutdown
-- `config.py` — Constants (stream endpoint prefix, global timeout)
+- `config.py` — Constants (route prefixes, global timeout, CDP screencast parameters: JPEG quality 50, 1280x720, every frame)
 - `security.py` — `JWTBearer` dependency class and `decode_jwt()`. Protected routes use `dependencies=[Depends(JWTBearer())]`
 - `health_check/` — Unprotected `/hc` (health status, uptime, version) and `/version` endpoints
-- `stream/` — CDP browser automation endpoints under `/fastapi/fiscalismia/stream`:
-  - `test_cdp_websocket.py` — Two routers:
-    - `router` (JWT-protected): `POST /start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
-    - `ws_router` (unprotected, auth via query param): `WebSocket /{session_id}/ws?token=<jwt>` — streams CDP screencast frames (base64 JPEG) over WebSocket
+- `rest/test_cdp.py` — JWT-protected REST router: `POST /cdp/start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
+- `websockets/test_cdp.py` — WebSocket router (auth via query param): `WS /session/{session_id}?token=<jwt>` — streams CDP screencast frames (base64 JPEG in JSON) over WebSocket with 10s keepalive ping
 - `logger.py` — Singleton `ColoredLogger` with custom ANSI formatting (Europe/Berlin timezone)
 - `colors.py` — ANSI escape code definitions
+
+**Route map (prefixes defined in `api/config.py`):**
+- `GET /` — root info (unprotected)
+- `GET /fastapi/fiscalismia/hc` — health check (unprotected)
+- `GET /fastapi/fiscalismia/version` — version (unprotected)
+- `POST /fastapi/fiscalismia/rest/cdp/start` — create CDP session (JWT-protected)
+- `WS /fastapi/fiscalismia/ws/session/{id}?token=<jwt>` — screencast stream (query param auth)
 
 **Tests (`tests/`):**
 - `test_ws.py` — End-to-end integration test for the CDP streaming endpoints (POST start + WebSocket frame reception)
 
 **Container architecture:** Supervisor manages two processes:
-- Nginx (port 5000, external) → reverse proxies to Uvicorn (port 3003, internal)
-- WebSocket upgrade support and CORS headers for localhost origins (3001, 4173)
+- Nginx (port 8444 SSL with PROXY protocol v2) → reverse proxies to Uvicorn (port 3003, internal)
+- Nginx splits traffic into three location blocks: `/fastapi/fiscalismia/ws/` (WebSocket streaming, zero-buffering, gzip off, 1h timeouts), `/fastapi/fiscalismia/rest/` (REST, buffered, gzip on), `/` (catch-all for health checks)
+- External ingress: HAProxy (port 443) → Nginx (port 8444) via TLS passthrough with SNI routing and PROXY protocol v2
 
 ## Environment Variables
 
@@ -75,5 +82,7 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 - WebSocket endpoints use a separate router without `JWTBearer` dependency (since `HTTPBearer` doesn't support WebSocket). Auth is validated via `?token=<jwt>` query parameter inside the handler using `decode_jwt()`
 - Playwright browser lifecycle is managed via FastAPI's `lifespan` context manager — a single shared Chromium instance is launched at startup and closed on shutdown
 - CDP screencast is started only after the WebSocket frame listener is attached, to avoid losing initial frames
+- Uvicorn runs with `--loop uvloop` which globally replaces the asyncio event loop. All `import asyncio` usage (Queue, wait_for, await) automatically runs on uvloop — no code changes needed
+- Nginx location blocks must match the route prefixes in `api/config.py` (`REST_ENDPOINT`, `WEBSOCKET_ENDPOINT`). If route prefixes change, update `nginx.conf` accordingly
 - Logging uses the custom `ColoredLogger` singleton (import from `api.logger`), not stdlib `logging` directly
 - Version string uses `major.minor.build` format; `.replace_me` in `api/__init__.py` is substituted by CI pipeline

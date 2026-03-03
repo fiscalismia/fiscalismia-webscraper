@@ -2,6 +2,9 @@
 Playwright browser automation running on a remote VM, exposing live recording stream of the browser interaction via WebSocket API call.
 Backend is a very basic dockerized FastAPI server exposing routes protected via jwt authentication.
 
+**Performance Tuning:**
+- Uvicorn is configured with `--loop uvloop` (see `supervisord.conf` and `main.py`). uvloop is a drop-in replacement for Python's default asyncio event loop, provides 2-4x faster I/O scheduling, built on libuv (the same C library behind Node.js). Once installed via the `--loop` flag, it globally replaces the asyncio event loop for the entire process — all `asyncio.Queue`, `asyncio.wait_for`, `await` calls etc. run on uvloop automatically without code changes.
+- TLS1.3 session ticket reuse for cached responses configured in `nginx.conf` with `ssl_session_tickets on;` and `ssl_session_timeout 4h;` - confirmed with test commands found below in this README
 
 ## Setup
 
@@ -82,6 +85,16 @@ podman run \
    fiscalismia-webscraper:0.9.2
 ```
 
-## Python Pip and Podman locally behind Windows Netskope Proxy and Artifactory
+## openssl TLS1.3 session caching for nginx performance
 
-INFO: Check code in private repository workbench_toolset
+to test:
+```bash
+# Step 1: Connect and wait briefly for the post-handshake NewSessionTicket
+(sleep 2; echo "Q") | openssl s_client -connect fastapi.demo.fiscalismia.com:443 \
+   -tls1_3 -servername fastapi.demo.fiscalismia.com -sess_out /tmp/tls_session.pem 2>/dev/null
+# Step 2: Resume with the saved ticket
+echo "Q" | openssl s_client -connect fastapi.demo.fiscalismia.com:443 \
+   -tls1_3 -servername fastapi.demo.fiscalismia.com -sess_in /tmp/tls_session.pem 2>&1 \
+   | grep -E "^(New|Reused)"
+# Expected: Reused, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+```
