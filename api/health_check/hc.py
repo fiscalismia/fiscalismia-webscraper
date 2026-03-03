@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import api.config
 import math
 import socket
 import os

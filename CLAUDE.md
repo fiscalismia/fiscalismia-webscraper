@@ -40,9 +40,9 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 
 ## Architecture
 
-**Entry point:** `main.py` → runs `uvicorn` loading `app.main:api`
+**Entry point:** `main.py` → runs `uvicorn` loading `api.main:api`
 
-**App structure (`app/`):**
+**App structure (`api/`):**
 - `main.py` — FastAPI app factory, registers routers with prefix/dependency injection, lifespan context manager for Playwright browser lifecycle
 - `browser.py` — Playwright browser lifecycle manager. Launches a single shared headless Chromium at startup, exposes `new_page()` for creating contexts/pages, tracks active CDP sessions, and cleans up on shutdown
 - `config.py` — Constants (stream endpoint prefix, global timeout)
@@ -52,7 +52,7 @@ podman run --env-file .env --rm -it -p 3003:3003 \
   - `test_cdp_websocket.py` — Two routers:
     - `router` (JWT-protected): `POST /start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
     - `ws_router` (unprotected, auth via query param): `WebSocket /{session_id}/ws?token=<jwt>` — streams CDP screencast frames (base64 JPEG) over WebSocket
-- `logging/logger.py` — Singleton `ColoredLogger` with custom ANSI formatting (Europe/Berlin timezone)
+- `logger.py` — Singleton `ColoredLogger` with custom ANSI formatting (Europe/Berlin timezone)
 - `colors.py` — ANSI escape code definitions
 
 **Tests (`tests/`):**
@@ -70,10 +70,10 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 
 ## Key Patterns
 
-- Routes are organized as FastAPI `APIRouter` instances in subpackages, included in `app/main.py`
+- Routes are organized as FastAPI `APIRouter` instances in subpackages, included in `api/main.py`
 - JWT protection is applied at the router level via `dependencies=[Depends(JWTBearer())]`, not per-endpoint
 - WebSocket endpoints use a separate router without `JWTBearer` dependency (since `HTTPBearer` doesn't support WebSocket). Auth is validated via `?token=<jwt>` query parameter inside the handler using `decode_jwt()`
 - Playwright browser lifecycle is managed via FastAPI's `lifespan` context manager — a single shared Chromium instance is launched at startup and closed on shutdown
 - CDP screencast is started only after the WebSocket frame listener is attached, to avoid losing initial frames
-- Logging uses the custom `ColoredLogger` singleton (import from `app.logging.logger`), not stdlib `logging` directly
-- Version string uses `major.minor.build` format; `.replace_me` in `app/__init__.py` is substituted by CI pipeline
+- Logging uses the custom `ColoredLogger` singleton (import from `api.logger`), not stdlib `logging` directly
+- Version string uses `major.minor.build` format; `.replace_me` in `api/__init__.py` is substituted by CI pipeline

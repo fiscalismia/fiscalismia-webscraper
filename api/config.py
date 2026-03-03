@@ -3,7 +3,8 @@ FASTAPI_GLOBAL_TIMEOUT_SECONDS = 90
 
 ### ROUTES ###
 BASE_ROUTE = "/fastapi/fiscalismia"
-STREAM_ENDPOINT = "/stream"
+REST_ENDPOINT = "/rest"
+WEBSOCKET_ENDPOINT = "/ws"
 
 # CDP screencast parameters (used by Page.startScreencast)
 CDP_SCREENCAST_FORMAT = "jpeg"

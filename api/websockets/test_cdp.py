@@ -1,8 +1,7 @@
 import asyncio
-import uuid
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from pydantic import BaseModel
-from api.logging.logger import logger
+from api.logger import logger
 from api.security import decode_jwt
 from api import browser
 from api.config import (
@@ -47,43 +46,14 @@ from api.config import (
 #   ___       __  ___       __        __   __       ___  ___
 #  |__   /\  /__`  |   /\  |__) |    |__) /  \ |  |  |  |__
 #  |    /~~\ .__/  |  /~~\ |    |    |  \ \__/ \__/  |  |___
-router = APIRouter()  # JWT-protected (POST /start)
-ws_router = APIRouter()  # unprotected (WebSocket needs custom auth)
+router = APIRouter()  # unprotected (WebSocket needs custom auth)
 
 
 class StartStreamRequest(BaseModel):
   url: str = "https://example.com"
 
 
-@router.post("/start")
-async def start_stream(req: StartStreamRequest):
-  """Launch a headless Chromium page, navigate to the given URL,
-  start a CDP screencast, and return a session_id for the WebSocket stream."""
-  session_id = str(uuid.uuid4())
-  try:
-    context, page = await browser.new_page(req.url)
-    cdp_session = await page.context.new_cdp_session(page)
-    # screencast is started when the WebSocket connects (not here)
-    # to avoid losing initial frames before the listener is attached
-    browser.sessions[session_id] = {
-      "context": context,
-      "page": page,
-      "cdp_session": cdp_session,
-    }
-    logger.info(f"Started CDP screencast session {session_id} for URL: {req.url}")
-    return {
-      "session_id": session_id,
-      "url": req.url,
-      "websocket": f"/stream/{session_id}/ws?token=<jwt>",
-    }
-  except Exception as e:
-    logger.error(f"Failed to start screencast: {e}")
-    raise HTTPException(
-      status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to start browser session: {str(e)}"
-    )
-
-
-@ws_router.websocket("/{session_id}/ws")
+@router.websocket("/session/{session_id}")
 async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Query(default=None)):
   """Stream CDP screencast frames (base64 JPEG) over WebSocket.
   Auth via query param: ws://host/stream/{session_id}/ws?token=<jwt>
