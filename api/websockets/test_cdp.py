@@ -105,7 +105,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
     while True:
       # wait for the next frame from CDP (with timeout to detect stale sessions)
       try:
-        params = await asyncio.wait_for(frame_queue.get(), timeout=30.0)
+        params = await asyncio.wait_for(frame_queue.get(), timeout=10.0)
       except asyncio.TimeoutError:
         # send a keepalive ping; if client is gone, this will raise
         await websocket.send_json({"type": "keepalive"})

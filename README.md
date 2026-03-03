@@ -64,9 +64,10 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
 **Locally Podman:**
 
 ```bash
+# add only on landline wifi
+# --no-cache \
+# --pull \
 podman build \
-   --pull \
-   --no-cache \
    --rm \
    -f "Dockerfile" \
    --build-arg BUILD_VERSION=0.9.2 \

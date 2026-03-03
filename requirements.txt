@@ -1,6 +1,7 @@
 PyJWT[crypto]
 fastapi
 uvicorn
+uvloop
 python-multipart
 tzdata
 python-dotenv
