@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from api.logger import logger
 from api.security import decode_jwt
 from api import browser
+import base64
 from api.config import (
   CDP_SCREENCAST_FORMAT,
   CDP_SCREENCAST_QUALITY,
@@ -113,17 +114,22 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
         continue
 
       session_id_frame = params.get("sessionId", 0)
-      frame_data = params.get("data", "")
-      metadata = params.get("metadata", {})
+
+      # TODO encode metadata into initial bytes and add an offset
+      # metadata = params.get("metadata", {})
+      raw_bytes = base64.b64decode(params.get("data", ""))
+      await websocket.send_bytes(raw_bytes)
 
       # send frame as JSON with base64 image data
-      await websocket.send_json(
-        {
-          "type": "frame",
-          "data": frame_data,
-          "metadata": metadata,
-        }
-      )
+      # frame_data = params.get("data", "")
+      # metadata = params.get("metadata", {})
+      # await websocket.send_json(
+      #   {
+      #     "type": "frame",
+      #     "data": frame_data,
+      #     "metadata": metadata,
+      #   }
+      # )
 
       # acknowledge frame to receive the next one
       await cdp_session.send(
