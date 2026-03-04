@@ -95,10 +95,10 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
       "everyNthFrame": CDP_SCREENCAST_EVERY_NTH_FRAME,
     },
   )
-  logger.info(f"CDP screencast started for session {session_id}")
 
   # force an initial repaint so the compositor emits at least one frame
   page = session["page"]
+  logger.info(f"Starting streaming CDP screencast session {session_id} for url {page.url}")
   await page.evaluate("window.scrollTo(0, 1)")
   await page.evaluate("window.scrollTo(0, 0)")
 

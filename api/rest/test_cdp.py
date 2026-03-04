@@ -29,7 +29,7 @@ async def start_stream(req: StartStreamRequest):
       "page": page,
       "cdp_session": cdp_session,
     }
-    logger.info(f"Started CDP screencast session {session_id} for URL: {req.url}")
+    logger.info(f"Initiated CDP screencast session {session_id} for URL: {req.url}")
     return {
       "session_id": session_id,
       "url": req.url,
