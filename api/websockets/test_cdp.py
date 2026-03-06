@@ -69,15 +69,11 @@ async def handle_mouse(cdp_session, action, user_input):
   logger.debug(f"message received x {x} y {y}")
 
   for cdp_type in CDP_MOUSE_ACTIONS.get(action, []):
+    logger.debug(f"Sending {cdp_type}")
     # see https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchMouseEvent
     await cdp_session.send(
       "Input.dispatchMouseEvent",
-      {
-        "type": cdp_type,
-        "x": x,
-        "y": y,
-        "button": button,
-      },
+      {"type": cdp_type, "x": x, "y": y, "button": button, "clickCount": 1},
     )
 
 
