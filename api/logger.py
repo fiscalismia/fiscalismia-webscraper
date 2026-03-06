@@ -1,8 +1,7 @@
 import logging
 import sys
 import json
-import json
-from fastapi import HTTPException, status
+from fastapi import WebSocket
 from api.colors import tty_colors
 from typing import Any
 from datetime import datetime
@@ -86,6 +85,11 @@ class ColoredLogger:
   def critical(self, msg: Any, user_vkey: str | None = None):
     """Log critical message with bright red color"""
     self._log(logging.CRITICAL, f"{tty_colors.CRITICAL}{msg}{tty_colors.RESET}", user_vkey)
+
+  async def ws_error_close(self, websocket: WebSocket, msg: str, code: int = 1003) -> None:
+    """Log an error and close the WebSocket. Caller must still return after this."""
+    self.error(msg)
+    await websocket.close(code=code, reason=msg)
 
   def header(self, msg: Any, level: int = 1, user_vkey: str | None = None):
     """Log header with specific styling based on level"""

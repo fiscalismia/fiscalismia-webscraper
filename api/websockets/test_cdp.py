@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from api.logger import logger
 from api.security import decode_jwt
 from api import browser
+from api.cdp_utility import human_click_delay
 import base64
 from api.config import (
   CDP_SCREENCAST_FORMAT,
@@ -55,26 +56,32 @@ class StartStreamRequest(BaseModel):
 
 
 CDP_MOUSE_ACTIONS = {
-  "mouse_click": ["mousePressed", "mouseReleased"],  # click = press + release
+  "custom_mouse_click": ["mousePressed", "mouseReleased"],  # click = press + release
   "mouseMoved": ["mouseMoved"],
   "mousePressed": ["mousePressed"],
   "mouseReleased": ["mouseReleased"],
+  "mouseWheel": ["mouseWheel"],
 }
 
 
 async def handle_mouse(cdp_session, action, user_input):
   x = user_input["x"]
   y = user_input["y"]
+  deltaX = user_input.get("deltaX", 0)
+  deltaY = user_input.get("deltaY", 0)
   button = user_input["button"]
   logger.debug(f"message received x {x} y {y}")
+  logger.debug(f"message received deltaX {deltaX} deltaY {deltaY}")
 
   for cdp_type in CDP_MOUSE_ACTIONS.get(action, []):
     logger.debug(f"Sending {cdp_type}")
     # see https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchMouseEvent
     await cdp_session.send(
       "Input.dispatchMouseEvent",
-      {"type": cdp_type, "x": x, "y": y, "button": button, "clickCount": 1},
+      {"type": cdp_type, "x": x, "y": y, "deltaX": deltaX, "deltaY": deltaY, "button": button, "clickCount": 1},
     )
+    if cdp_type == "mousePressed":
+      await asyncio.sleep(human_click_delay())
 
 
 @router.websocket("/session/{session_id}")
@@ -86,18 +93,18 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   ### VALIDATE JWT
   if not token:
     # for websocket codes see https://websocket.org/reference/close-codes/
-    await websocket.close(code=1008, reason="Missing token query parameter")
+    await logger.ws_error_close(websocket, "Missing token query parameter", 1008)
     return
   jwt_result = decode_jwt(token)
   if jwt_result["http_status"] != 200:
-    await websocket.close(
-      code=1008, reason=jwt_result.get("error_message", "Websocket Connection could not validate JWT Session Token")
+    await logger.ws_error_close(
+      websocket, jwt_result.get("error_message", "Websocket Connection could not validate JWT Session Token"), 1008
     )
     return
 
   session = browser.sessions.get(session_id)
   if not session:
-    await websocket.close(code=1006, reason="Session not found")
+    await logger.ws_error_close(websocket, "Session not found", 1006)
     return
 
   await websocket.accept()
@@ -173,19 +180,19 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
         continue
       message_type = client_message.get("type", None)
       if not message_type:
-        await websocket.close(code=1003, reason="Input requires a type key to be set.")
+        await logger.ws_error_close(websocket, "Input requires a type key to be set.")
         return
       x = client_message.get("x", None)
       y = client_message.get("y", None)
       if x is None or y is None:
-        await websocket.close(code=1003, reason="JSON input requires x and y coordinates be set as keys.")
+        await logger.ws_error_close(websocket, "JSON input requires x and y coordinates be set as keys.")
         return
-      if message_type == "mouse_click":
+      if message_type in ["custom_mouse_click", "mouseWheel", "mouseMoved"]:
         mouse_btn = client_message.get("button", None)
         if not mouse_btn:
-          await websocket.close(code=1003, reason="type mouseclick requires a button key to be set.")
+          await logger.ws_error_close(websocket, "Mouse events requires the button property to be set.")
           return
-        await handle_mouse(cdp_session, "mouse_click", client_message)
+        await handle_mouse(cdp_session, message_type, client_message)
 
   try:
     await asyncio.gather(send_frames(), receive_input())
@@ -194,6 +201,6 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   except Exception as e:
     logger.error(f"WebSocket error in session {session_id}: {e}")
   finally:
-    logger.debug("Cleaning up CDP session after CDP route has been hit.")
+    logger.debug("Cleaning up CDP session after CDP route invocation.")
     stop_event.set()
     await browser.cleanup_session(session_id)
