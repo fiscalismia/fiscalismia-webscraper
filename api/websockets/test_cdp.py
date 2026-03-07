@@ -91,12 +91,22 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   Each frame is sent as a text message. The endpoint acknowledges each frame
   via Page.screencastFrameAck to request the next one."""
   ### VALIDATE JWT
+  validated_jwt = asyncio.Event()
+  await websocket.accept()
+  try:
+    token = await asyncio.wait_for(websocket.receive_text(), timeout=5.0)
+  except asyncio.TimeoutError:
+    await logger.ws_error_close(websocket, "Token not received in time.", 1008)
+    return
   if not token:
     # for websocket codes see https://websocket.org/reference/close-codes/
-    await logger.ws_error_close(websocket, "Missing token query parameter", 1008)
+    await logger.ws_error_close(websocket, "Missing token websocket text payload.", 1008)
     return
   jwt_result = decode_jwt(token)
-  if jwt_result["http_status"] != 200:
+  if jwt_result["http_status"] == 200:
+    validated_jwt.set()
+    logger.debug("Successfully validated initial token received via websocket.receive_text().")
+  if not validated_jwt.is_set():
     await logger.ws_error_close(
       websocket, jwt_result.get("error_message", "Websocket Connection could not validate JWT Session Token"), 1008
     )
@@ -104,13 +114,12 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
 
   session = browser.sessions.get(session_id)
   if not session:
-    await logger.ws_error_close(websocket, "Session not found", 1006)
+    await logger.ws_error_close(websocket, "Session not found", 1008)
     return
 
-  await websocket.accept()
-  cdp_session = session["cdp_session"]
-  frame_queue = asyncio.Queue()
   stop_event = asyncio.Event()
+  frame_queue = asyncio.Queue()
+  cdp_session = session["cdp_session"]
 
   def on_screencast_frame(params):
     frame_queue.put_nowait(params)
