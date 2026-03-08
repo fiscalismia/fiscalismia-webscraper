@@ -20,15 +20,7 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
    cd ~/git/fiscalismia-webscraper
    ```
 
-2. **Setup Virtual Environment:**
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-3. **Environment Variables:**
+2. **Environment Variables:**
 
    Store the `.env` in the root folder of `fiscalismia-webscraper`. Ensure that you never upload this file to Git, as it contains sensitive information!
    ```bash
@@ -36,7 +28,7 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
    SNYK_TOKEN=
    ```
 
-4. **Github Secrets:**
+3. **Github Secrets:**
 
    Set up Github Secrets in your Repository Settings, for the pipeline to run successfully. These can and should be the same as in your `.env` file.
    ```bash
@@ -44,7 +36,7 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
    SNYK_TOKEN
    ```
 
-5. **Linter and Formatter**
+4. **Linter and Formatter**
 
    We use **RUFF** which is faster, less opinionated and more configurable than black.
    The ruff VSCode extension formats automatically on saving files. Get it here https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff
@@ -52,6 +44,17 @@ Backend is a very basic dockerized FastAPI server exposing routes protected via 
    The formatOnSave settings are persisted in `.vscode/settings.json`.
 
    INFO: The pipeline enforces this formatting and fails on mismatches.
+
+5. **Dependency Resolution**
+
+```bash
+cd ~/git/fiscalismia-webscraper
+python -m venv .venv
+source .venv/bin/activate
+pip install pip-tools
+pip-compile --generate-hashes --strip-extras --output-file=requirements.txt pyproject.toml
+pip install -r requirements.txt
+```
 
 ## Running
 
@@ -83,6 +86,12 @@ podman run \
    -p 3003:3003 \
    --name fiscalismia-webscraper \
    fiscalismia-webscraper:0.9.2
+```
+
+## Updating
+
+```bash
+pip-compile --upgrade --generate-hashes --strip-extras --output-file=requirements.txt pyproject.toml
 ```
 
 ## openssl TLS1.3 session caching for nginx performance
