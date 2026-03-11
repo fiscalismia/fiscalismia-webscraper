@@ -1,5 +1,7 @@
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 from api.logger import logger
+from api.stealth.browser_args import get_stealth_browser_args
+from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT
 
 # Shared Playwright state
 _playwright = None
@@ -30,7 +32,7 @@ async def startup():
   global _playwright, _browser
   logger.info("Starting Playwright and launching headless Chromium...")
   _playwright = await async_playwright().start()
-  _browser = await _playwright.chromium.launch(headless=True, args=CHROMIUM_ARGS)
+  _browser = await _playwright.chromium.launch(headless=True, args=CHROMIUM_ARGS + get_stealth_browser_args())
   logger.info("Chromium browser launched successfully.")
 
 
@@ -54,7 +56,7 @@ async def new_page(url: str | None = None) -> tuple[BrowserContext, Page]:
   """Create a new browser context and page from the shared Chromium instance."""
   if not _browser:
     raise RuntimeError("Browser not initialized. Ensure app lifespan started.")
-  context = await _browser.new_context(viewport={"width": 1280, "height": 720})
+  context = await _browser.new_context(viewport={"width": BROWSER_VIEWPORT_WIDTH, "height": BROWSER_VIEWPORT_HEIGHT})
   page = await context.new_page()
   if url:
     await page.goto(url, wait_until="domcontentloaded")

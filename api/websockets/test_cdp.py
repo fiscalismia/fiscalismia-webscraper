@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from api.logger import logger
 from api.security import decode_jwt
 from api import browser
-from api.cdp_utility import human_click_delay
+from api.mouse import dispatch_mouse_move, dispatch_mouse_click
 import base64
 from api.config import (
   CDP_SCREENCAST_FORMAT,
@@ -55,33 +55,30 @@ class StartStreamRequest(BaseModel):
   url: str = "https://example.com"
 
 
-CDP_MOUSE_ACTIONS = {
-  "custom_mouse_click": ["mousePressed", "mouseReleased"],  # click = press + release
-  "mouseMoved": ["mouseMoved"],
-  "mousePressed": ["mousePressed"],
-  "mouseReleased": ["mouseReleased"],
-  "mouseWheel": ["mouseWheel"],
-}
-
-
-async def handle_mouse(cdp_session, action, user_input):
+async def handle_mouse(cdp_session, action, user_input, session):
   x = user_input["x"]
   y = user_input["y"]
-  deltaX = user_input.get("deltaX", 0)
-  deltaY = user_input.get("deltaY", 0)
   button = user_input["button"]
-  logger.debug(f"message received x {x} y {y}")
-  logger.debug(f"message received deltaX {deltaX} deltaY {deltaY}")
+  from_point = (session.get("cursor_x", x), session.get("cursor_y", y))
+  to_point = (x, y)
+  logger.debug(f"Mouse {action}: from {from_point} to {to_point}")
 
-  for cdp_type in CDP_MOUSE_ACTIONS.get(action, []):
-    logger.debug(f"Sending {cdp_type}")
-    # see https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchMouseEvent
+  if action == "mouseMoved":
+    await dispatch_mouse_move(cdp_session, from_point, to_point)
+    session["cursor_x"] = x
+    session["cursor_y"] = y
+  elif action == "custom_mouse_click":
+    element_bbox = user_input.get("element_bbox", None)
+    await dispatch_mouse_click(cdp_session, to_point, from_point, button, element_bbox)
+    session["cursor_x"] = x
+    session["cursor_y"] = y
+  elif action == "mouseWheel":
+    deltaX = user_input.get("deltaX", 0)
+    deltaY = user_input.get("deltaY", 0)
     await cdp_session.send(
       "Input.dispatchMouseEvent",
-      {"type": cdp_type, "x": x, "y": y, "deltaX": deltaX, "deltaY": deltaY, "button": button, "clickCount": 1},
+      {"type": "mouseWheel", "x": x, "y": y, "deltaX": deltaX, "deltaY": deltaY, "button": button, "pointerType": "mouse"},
     )
-    if cdp_type == "mousePressed":
-      await asyncio.sleep(human_click_delay())
 
 
 @router.websocket("/session/{session_id}")
@@ -201,7 +198,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
         if not mouse_btn:
           await logger.ws_error_close(websocket, "Mouse events requires the button property to be set.")
           return
-        await handle_mouse(cdp_session, message_type, client_message)
+        await handle_mouse(cdp_session, message_type, client_message, session)
 
   try:
     await asyncio.gather(send_frames(), receive_input())

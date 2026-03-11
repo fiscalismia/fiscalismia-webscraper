@@ -3,6 +3,8 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from api.logger import logger
 from api import browser
+from api.stealth import apply_stealth
+from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT
 
 #   ___       __  ___       __        __   __       ___  ___
 #  |__   /\  /__`  |   /\  |__) |    |__) /  \ |  |  |  |__
@@ -22,12 +24,15 @@ async def start_stream(req: StartStreamRequest):
   try:
     context, page = await browser.new_page(req.url)
     cdp_session = await page.context.new_cdp_session(page)
+    await apply_stealth(page, cdp_session)
     # screencast is started when the WebSocket connects (not here)
     # to avoid losing initial frames before the listener is attached
     browser.sessions[session_id] = {
       "context": context,
       "page": page,
       "cdp_session": cdp_session,
+      "cursor_x": BROWSER_VIEWPORT_WIDTH // 2,
+      "cursor_y": BROWSER_VIEWPORT_HEIGHT // 2,
     }
     logger.info(f"Initiated CDP screencast session {session_id} for URL: {req.url}")
     return {
