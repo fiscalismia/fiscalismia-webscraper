@@ -1,6 +1,7 @@
 import api.config
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,20 +10,41 @@ from api.health_check.hc import router as health_check_router
 from api.health_check.version import router as version_router
 from api.security import JWTBearer
 from api.rest.test_cdp import router as test_cdp_rest_router
+from api.rest.scrape_supermarkets import router as scrape_supermarkets_router
 from api.websockets.test_cdp import router as test_cdp_websocket_router
 from api.logger import set_global_log_level as log_level
+from api.config import SCRAPE_RESULTS_DIR, SCRAPE_RESULTS_TTL_SECONDS
 from api import browser
 
 app_version = os.environ.get("APP_VERSION", "local-development")
 decoding_secret = os.environ.get("JWT_SECRET", None)
+IS_PRODUCTION = False
+
+
+def cleanup_scrape_results(max_age_seconds: int = SCRAPE_RESULTS_TTL_SECONDS):
+  """Remove stale scrape result files. Pass max_age_seconds=0 to remove all."""
+  if not os.path.isdir(SCRAPE_RESULTS_DIR):
+    return
+  now = time.time()
+  for f in os.listdir(SCRAPE_RESULTS_DIR):
+    filepath = os.path.join(SCRAPE_RESULTS_DIR, f)
+    if os.path.isfile(filepath):
+      if max_age_seconds == 0 or (now - os.path.getmtime(filepath)) > max_age_seconds:
+        os.remove(filepath)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-  """Manage Playwright browser lifecycle: launch on startup, close on shutdown."""
+  """Manage Playwright browser lifecycle: launch on startup, close on shutdown.
+  Yield marks application execution in the asynchronous lifecycle context, where code
+  is run between initial startup and graceful shutdown via e.g. SIGTERM or SIGINT.
+  SIGKILL would skip browser shutdown and cleanup, but since they live in container memory,
+  this is a non issue."""
+  os.makedirs(SCRAPE_RESULTS_DIR, exist_ok=True)
   await browser.startup()
   yield
   await browser.shutdown()
+  cleanup_scrape_results(max_age_seconds=0)
 
 
 # Create FastAPI app instance
@@ -31,6 +53,9 @@ fastapi = FastAPI(
   version=app_version,
   timeout=api.config.FASTAPI_GLOBAL_TIMEOUT_SECONDS,
   lifespan=lifespan,
+  docs_url=None if IS_PRODUCTION else "/docs",
+  redoc_url=None if IS_PRODUCTION else "/redoc",
+  openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
 # CORS middleware allowing specific origins only
@@ -57,6 +82,11 @@ fastapi.include_router(version_router, prefix=f"{api.config.BASE_ROUTE}")
 # see https://testdriven.io/blog/fastapi-jwt-auth/
 fastapi.include_router(
   test_cdp_rest_router,
+  dependencies=[Depends(JWTBearer())],
+  prefix=f"{api.config.BASE_ROUTE}{api.config.REST_ENDPOINT}",
+)
+fastapi.include_router(
+  scrape_supermarkets_router,
   dependencies=[Depends(JWTBearer())],
   prefix=f"{api.config.BASE_ROUTE}{api.config.REST_ENDPOINT}",
 )
