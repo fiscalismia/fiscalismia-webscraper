@@ -24,9 +24,7 @@ def ease_in_out(t: float) -> float:
   return 3 * t * t - 2 * t * t * t
 
 
-def generate_control_points(
-  start: tuple, end: tuple
-) -> tuple[tuple[float, float], tuple[float, float]]:
+def generate_control_points(start: tuple, end: tuple) -> tuple[tuple[float, float], tuple[float, float]]:
   """Generate two control points for a cubic Bezier curve.
   Creates a single-arc trajectory with perpendicular offset."""
   dx = end[0] - start[0]
@@ -67,9 +65,7 @@ def _point_count_for_distance(dist: float) -> int:
     return random.randint(8, 12)
 
 
-def interpolate_path(
-  start: tuple[float, float], end: tuple[float, float]
-) -> list[tuple[int, int]]:
+def interpolate_path(start: tuple[float, float], end: tuple[float, float]) -> list[tuple[int, int]]:
   """Generate a humanized mouse path from start to end using cubic Bezier interpolation.
   Returns a list of (x, y) integer coordinate pairs."""
   dx = end[0] - start[0]

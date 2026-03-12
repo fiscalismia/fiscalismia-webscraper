@@ -4,10 +4,7 @@ from api.logger import logger
 
 def _strip_source_urls(script: str) -> str:
   """Remove sourceURL comments that reveal script injection."""
-  return "\n".join(
-    line for line in script.splitlines()
-    if not line.strip().startswith("//# sourceURL=")
-  )
+  return "\n".join(line for line in script.splitlines() if not line.strip().startswith("//# sourceURL="))
 
 
 async def apply_cdp_patches(cdp_session) -> None:

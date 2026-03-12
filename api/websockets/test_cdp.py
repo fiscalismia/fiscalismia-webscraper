@@ -77,7 +77,15 @@ async def handle_mouse(cdp_session, action, user_input, session):
     deltaY = user_input.get("deltaY", 0)
     await cdp_session.send(
       "Input.dispatchMouseEvent",
-      {"type": "mouseWheel", "x": x, "y": y, "deltaX": deltaX, "deltaY": deltaY, "button": button, "pointerType": "mouse"},
+      {
+        "type": "mouseWheel",
+        "x": x,
+        "y": y,
+        "deltaX": deltaX,
+        "deltaY": deltaY,
+        "button": button,
+        "pointerType": "mouse",
+      },
     )
 
 

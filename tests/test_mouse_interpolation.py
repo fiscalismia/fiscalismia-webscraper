@@ -110,7 +110,7 @@ class TestMovementDelay:
     for _ in range(100):
       d = movement_delay()
       assert d >= 0.004  # min 4ms
-      assert d < 0.050   # reasonable upper bound
+      assert d < 0.050  # reasonable upper bound
 
   def test_returns_float(self):
     assert isinstance(movement_delay(), float)
