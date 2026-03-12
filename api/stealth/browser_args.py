@@ -2,7 +2,7 @@ def get_stealth_browser_args() -> list[str]:
   """Chrome launch flags to reduce automation detection signals."""
   return [
     "--disable-blink-features=AutomationControlled",
-    "--window-size=1680,1950",
+    "--window-size=1600,900",
     "--no-default-browser-check",
     "--disable-component-update",
     "--disable-domain-reliability",

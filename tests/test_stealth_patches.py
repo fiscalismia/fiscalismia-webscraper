@@ -1,6 +1,5 @@
 """Unit tests for stealth browser hardening."""
 
-import asyncio
 import inspect
 from api.stealth.browser_args import get_stealth_browser_args
 from api.stealth.js_patches import (
@@ -9,7 +8,6 @@ from api.stealth.js_patches import (
   PATCH_PLUGINS,
   PATCH_PERMISSIONS,
   PATCH_WEBGL_VENDOR,
-  PATCH_SCREEN_XY,
   STEALTH_SCRIPTS,
   ALL_PATCHES,
 )
@@ -27,7 +25,7 @@ class TestBrowserArgs:
 
   def test_contains_window_size(self):
     args = get_stealth_browser_args()
-    assert "--window-size=1680,1050" in args
+    assert "--window-size=1600,900" in args
 
   def test_all_strings(self):
     args = get_stealth_browser_args()

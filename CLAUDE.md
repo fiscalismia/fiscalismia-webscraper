@@ -46,7 +46,7 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 **App structure (`api/`):**
 - `main.py` — FastAPI app factory, registers routers with prefix/dependency injection, lifespan context manager for Playwright browser lifecycle
 - `browser.py` — Playwright browser lifecycle manager. Launches a single shared headless Chromium at startup, exposes `new_page()` for creating contexts/pages, tracks active CDP sessions, and cleans up on shutdown
-- `config.py` — Constants (route prefixes, global timeout, CDP screencast parameters: JPEG quality 50, 1680x1050, viewport dimensions, mouse movement tuning, stealth WebGL spoofing)
+- `config.py` — Constants (route prefixes, global timeout, CDP screencast parameters: JPEG quality 50, 1600x900, viewport dimensions, mouse movement tuning, stealth WebGL spoofing)
 - `security.py` — `JWTBearer` dependency class and `decode_jwt()`. Protected routes use `dependencies=[Depends(JWTBearer())]`
 - `health_check/` — Unprotected `/hc` (health status, uptime, version) and `/version` endpoints
 - `rest/test_cdp.py` — JWT-protected REST router: `POST /cdp/start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
@@ -86,7 +86,7 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 - WebSocket endpoints use a separate router without `JWTBearer` dependency (since `HTTPBearer` doesn't support WebSocket). Auth is validated via `?token=<jwt>` query parameter inside the handler using `decode_jwt()`
 - Playwright browser lifecycle is managed via FastAPI's `lifespan` context manager — a single shared Chromium instance is launched at startup and closed on shutdown
 - CDP screencast is started only after the WebSocket frame listener is attached, to avoid losing initial frames
-- Browser viewport is 1680x1050 (matching CDP screencast dimensions) — configured in `api/config.py`
+- Browser viewport is 1600x900 (matching CDP screencast dimensions) — configured in `api/config.py`
 - Stealth hardening is applied per-session via `apply_stealth()` in the REST `/cdp/start` handler. Stealth verification: visit `bot.sannysoft.com` via a CDP session
 - Mouse movements are server-side interpolated using cubic Bezier curves with ease-in-out timing, micro-jitter, and overshoot correction for long distances. Client sends target coordinates; server generates the humanized trajectory
 - Uvicorn runs with `--loop uvloop` which globally replaces the asyncio event loop. All `import asyncio` usage (Queue, wait_for, await) automatically runs on uvloop — no code changes needed

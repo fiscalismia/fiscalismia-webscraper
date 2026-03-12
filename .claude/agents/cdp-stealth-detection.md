@@ -186,14 +186,14 @@ STEALTH_ARGS = [
     "--disable-backgrounding-occluded-windows",
     "--disable-renderer-backgrounding",
     "--disable-background-timer-throttling",
-    "--window-size=1680,1050",  # Realistic viewport — non-standard sizes are flagged
+    "--window-size=1600,900",  # Realistic viewport — non-standard sizes are flagged
 ]
 ```
 
 **Important notes to document in code comments:**
 
 - `--disable-blink-features=AutomationControlled` is the simplest fix for `navigator.webdriver` — it prevents Chrome from setting it to `true` and suppresses the "Chrome is being controlled by automated software" infobar
-- `--window-size=1680,1050` should match the most common desktop resolution. Non-standard sizes (like Playwright's default 1280×720) are a fingerprinting signal. **Update `api/config.py` CDP screencast dimensions to match.**
+- `--window-size=1600,900` should match the most common desktop resolution. Non-standard sizes (like Playwright's default 1280×720) are a fingerprinting signal. **Update `api/config.py` CDP screencast dimensions to match.**
 - For headless mode: use `--headless=new` (Chrome 112+) which produces near-authentic fingerprints including `window.chrome`, realistic `navigator.plugins`, and proper user agent. Better yet, document the Xvfb alternative for maximum stealth.
 - Avoid "Chrome for Testing" binary — use system-installed Chrome via Playwright's `channel='chrome'` option. The testing binary has a different fingerprint that anti-bot systems recognize.
 
@@ -288,8 +288,8 @@ browser = await playwright.chromium.launch(
 
 ```python
 # Stealth configuration
-STEALTH_VIEWPORT_WIDTH = 1680
-STEALTH_VIEWPORT_HEIGHT = 1050
+STEALTH_VIEWPORT_WIDTH = 1600
+STEALTH_VIEWPORT_HEIGHT = 900
 STEALTH_USER_AGENT = None  # None = use browser default (safest). Set only if needed.
 STEALTH_WEBGL_VENDOR = "Google Inc. (NVIDIA)"
 STEALTH_WEBGL_RENDERER = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 6GB Direct3D11 vs_5_0 ps_5_0, D3D11)"
@@ -301,7 +301,7 @@ STEALTH_WEBGL_RENDERER = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 6GB Direct3D11 
 
 ### 1. Update `api/config.py` CDP Screencast Dimensions
 
-Change CDP screencast resolution from 1280×720 to match the stealth viewport (1680×1050), or make it configurable. The viewport size and screencast dimensions should be consistent.
+Change CDP screencast resolution from 1280×720 to match the stealth viewport (1600×900), or make it configurable. The viewport size and screencast dimensions should be consistent.
 
 ### 2. Create `tests/test_mouse_interpolation.py`
 
