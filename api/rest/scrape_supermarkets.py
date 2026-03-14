@@ -55,7 +55,7 @@ async def _run_scrape(session_id: str, url: str):
   filepath = os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json")
   with open(filepath, "w") as f:
     f.write(result.model_dump_json(indent=2))
-  logger.info(f"[{session_id}] Scrape result written to {filepath}")
+  logger.header(f"[{session_id}] Scrape result written to {filepath}")
 
 
 @router.post("/cdp/scrape/supermarket/aldi_prospekt")

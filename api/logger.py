@@ -91,7 +91,7 @@ class ColoredLogger:
     self.error(msg)
     await websocket.close(code=code, reason=msg)
 
-  def header(self, msg: Any, level: int = 1, user_vkey: str | None = None):
+  def header(self, msg: Any, level: int = 1):
     """Log header with specific styling based on level"""
     header_msg = ""
     if level == 1:
@@ -102,7 +102,7 @@ class ColoredLogger:
       header_msg = f"{tty_colors.HEADER_3}{msg}{tty_colors.RESET}"
     else:
       raise Exception("Add level parameters. Valid values: level=1 | level=2 | level=3 ")
-    self._log(logging.INFO, header_msg, user_vkey)
+    self._log(logging.INFO, header_msg)
 
 
 # Create a singleton instance
