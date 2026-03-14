@@ -10,11 +10,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from api.scraping import ScrapeResult
 from api.stealth import apply_stealth
-from api.config import (
-  BROWSER_VIEWPORT_WIDTH,
-  BROWSER_VIEWPORT_HEIGHT,
-  SCRAPE_RESULTS_DIR,
-)
+from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT, SCRAPE_RESULTS_DIR, BASE_ROUTE, REST_ENDPOINT
 from api.scraping.aldi_prospekt import scrape_aldi_prospekt
 
 router = APIRouter()
@@ -61,6 +57,7 @@ async def _run_scrape(session_id: str, url: str):
 @router.post("/cdp/scrape/supermarket/aldi_prospekt")
 async def scrape_aldi(req: StartWebscrapeRequest):
   """Launch a headless browser, navigate to Aldi prospekt page, and start automated scraping."""
+  logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/supermarket/aldi_prospekt received a query")
   session_id = str(uuid.uuid4())
   try:
     context, page = await browser.new_page(req.url)
@@ -95,6 +92,7 @@ async def scrape_aldi(req: StartWebscrapeRequest):
 @router.get("/cdp/scrape/results/{session_id}")
 async def get_scrape_results(session_id: str):
   """Retrieve scraping results for a given session."""
+  logger.debug(f"GET route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/results/{session_id} received a query")
   filepath = os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json")
   if os.path.isfile(filepath):
     with open(filepath, "r") as f:

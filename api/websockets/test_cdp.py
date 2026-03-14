@@ -12,6 +12,9 @@ from api.config import (
   CDP_SCREENCAST_MAX_WIDTH,
   CDP_SCREENCAST_MAX_HEIGHT,
   CDP_SCREENCAST_EVERY_NTH_FRAME,
+  BASE_ROUTE,
+  WEBSOCKET_ENDPOINT,
+  TIMEOUT_SEC_LONG,
 )
 
 ########## Chrome Developer Protocol ###################################
@@ -95,6 +98,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   Auth via query param: ws://host/stream/{session_id}/ws?token=<jwt>
   Each frame is sent as a text message. The endpoint acknowledges each frame
   via Page.screencastFrameAck to request the next one."""
+  logger.debug(f"route {BASE_ROUTE}{WEBSOCKET_ENDPOINT}/session/{session_id} received a query")
   ### VALIDATE JWT
   validated_jwt = asyncio.Event()
   await websocket.accept()
@@ -154,11 +158,11 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
     while not stop_event.is_set():
       try:
         # wait for the next frame from CDP (with timeout to detect stale sessions)
-        params = await asyncio.wait_for(frame_queue.get(), timeout=10.0)
+        params = await asyncio.wait_for(frame_queue.get(), timeout=TIMEOUT_SEC_LONG)
       except asyncio.TimeoutError:
         # send a keepalive ping; if client is gone, this will raise
         await websocket.send_json({"type": "keepalive"})
-        logger.debug(f"CDP session {session_id} keepalive sent to client.")
+        logger.debug(f"CDP session {session_id} LOL keepalive sent to client.")
         continue
 
       # TODO encode metadata into initial bytes and add an offset

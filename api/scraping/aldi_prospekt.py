@@ -50,10 +50,26 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
   await page.wait_for_load_state("networkidle")
   logger.success(f"[{session_id}] Navigated to prospekt: {page.url}")
 
-  # 5. Navigate in a loop to next page until the end has been reached - rate limit self to avoid spam
+  # 5. Extract total pagecount of prospekt
+  try:
+    current_page_label = await (await page.wait_for_selector(".current-page"), TIMEOUT_SEC_SHORT).get_attribute(
+      "aria-label", TIMEOUT_SEC_SHORT
+    )
+    current_pages = await (
+      await page.wait_for_selector(".current-page > .page-numbers", TIMEOUT_SEC_SHORT)
+    ).inner_text()
+    total_pages = await (await page.wait_for_selector(".current-page > .total", TIMEOUT_SEC_SHORT)).inner_text()
+    if not current_pages or not total_pages:
+      logger.info(f"[{session_id}] {current_page_label}")
+    logger.info(f"Current page is {current_pages} and total pages is {total_pages}")
+  except PlaywrightTimeoutError:
+    logger.warning(f"[{session_id}] Error retrieving total page count. Continue...")
+
+  # 6. Navigate in a loop to next page until the end has been reached - rate limit self to avoid spam
   while True:
     try:
       logger.debug("Looking for next page link to click.")
+      await asyncio.sleep(random.triangular(1.25, 1.75, 2.25))
       # select either by link id OR by aria-label, that's what colon does in css selectors
       link = await page.wait_for_selector('#next_slide, [aria-label="Nächste Seite"]', timeout=TIMEOUT_SEC_DEFAULT)
       await link.click()

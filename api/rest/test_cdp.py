@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from api.logger import logger
 from api import browser
 from api.stealth import apply_stealth
-from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT
+from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT, BASE_ROUTE, REST_ENDPOINT
 
 #   ___       __  ___       __        __   __       ___  ___
 #  |__   /\  /__`  |   /\  |__) |    |__) /  \ |  |  |  |__
@@ -20,6 +20,7 @@ class StartStreamRequest(BaseModel):
 async def start_stream(req: StartStreamRequest):
   """Launch a headless Chromium page, navigate to the given URL,
   start a CDP screencast, and return a session_id for the WebSocket stream."""
+  logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/start received a query")
   session_id = str(uuid.uuid4())
   try:
     context, page = await browser.new_page(req.url)
