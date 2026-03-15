@@ -5,36 +5,27 @@ import random
 from playwright.async_api import Page, CDPSession, TimeoutError as PlaywrightTimeoutError
 from api.logger import logger
 from api.config import ALDI_COOKIE_BANNER_SELECTOR, TIMEOUT_SEC_SHORT, TIMEOUT_SEC_DEFAULT, TIMEOUT_SEC_LONG
-from api.scraping import ScrapeResult, get_current_week_pattern
+from api.scraping import ScrapeResult, get_current_week_pattern, build_prospekt_page_urls, respond_with_error
 
 NETWORK_IDLE = "networkidle"  # DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
 LOADED = "domcontentloaded"
 prospekt_page_urls: list[str] = []
+prospekt_images_alt_text_dict: dict[str, str] = {}
+prospekt_images_alt_text_set: set[str] = set()
 
 
-def build_prospekt_page_urls(prospekt_url: str, start_page: int, total_pages: int):
-  """Builds a collection of urls to navigate, since clicking the next button is error-prone"""
-  increment_by = 2
-  slice_str = "/page/"
-  slice_idx = prospekt_url.index(slice_str)
-  target_url_base = f"{prospekt_url[:slice_idx]}{slice_str}"
-  for x in range(start_page, total_pages, increment_by):
-    next_page_str = f"{str(x + 1)}-{str(x + 2)}"
-    next_prospekt_url = f"{target_url_base}{next_page_str}"
-    prospekt_page_urls.append(next_prospekt_url)
-
-
-def respond_with_error(session_id: str, url: str, error_msg: str):
-  """Returns error Object for logging to output file"""
-  timestamp = datetime.now(ZoneInfo("Europe/Berlin")).isoformat()
-  logger.error(f"[{session_id}] ${error_msg}")
-  return ScrapeResult(
-    status="error",
-    session_id=session_id,
-    target_url=url,
-    timestamp=timestamp,
-    data={"error": error_msg},
-  )
+async def parse_img_alt_text(page: Page, url: str):
+  """Parses all alt text (for screen readers) of prospekt images and adds it to a set for later processing"""
+  logger.debug(f"Extracting images in pages {url}")
+  query_selector = 'img.left, img.right, img[src*="prospekt.aldi-sued"]'
+  await page.wait_for_selector(query_selector, timeout=TIMEOUT_SEC_SHORT)
+  images = await page.query_selector_all(query_selector)
+  logger.debug(f"Found {len(images)} image elements")
+  for img in images:
+    alt = await img.get_attribute("alt")
+    src = await img.get_attribute("src")
+    prospekt_images_alt_text_dict[src] = alt
+    prospekt_images_alt_text_set.add(alt)
 
 
 async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: str, url: str) -> ScrapeResult:
@@ -92,19 +83,35 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
   current_url = page.url
   logger.success(f"[{session_id}] Navigated to prospekt: {current_url}")
 
-  build_prospekt_page_urls(current_url, 1, total_pages)
-
   # 6. Navigate in a loop to next page until the end has been reached - rate limit self to avoid spam
+  build_prospekt_page_urls(current_url, 1, total_pages, prospekt_page_urls)
   for prospekt_page in prospekt_page_urls:
+    if "2-3" in prospekt_page:
+      logger.debug("Skipping pages 2-3 because they only contain an overview")
+      continue
     try:
       await asyncio.sleep(random.triangular(0.50, 0.875, 1.25))
       logger.debug(f"[{session_id}] Going to page {prospekt_page}")
       await page.goto(prospekt_page, timeout=TIMEOUT_SEC_DEFAULT, wait_until=LOADED)
       await asyncio.sleep(random.triangular(0.50, 0.875, 1.25))
       logger.success(f"[{session_id}] Successfully navigated to page {page.url}")
+      await parse_img_alt_text(page, prospekt_page)
     except PlaywrightTimeoutError:
-      logger.warning(f"[{session_id}] No next page found. Continue...")
+      logger.warning(f"[{session_id}] Next page navigation timed out. Continue...")
       break
+
+  # 7. Log scraping stats
+  missing_alt = {src: src for src, alt in prospekt_images_alt_text_dict.items() if not alt}
+  logger.info(
+    f"[{session_id}] Scraping complete — "
+    f"Total pages: [{total_pages}], "
+    f"Total images: [{len(prospekt_images_alt_text_dict)}], "
+    f"Unique alt texts: [{len(prospekt_images_alt_text_set)}], "
+    f"Missing alt text: [{len(missing_alt)}]"
+  )
+  if missing_alt:
+    for src in missing_alt:
+      logger.warning(f"[{session_id}] Missing alt text for: {src}")
 
   return ScrapeResult(
     status="success",
@@ -112,4 +119,7 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     target_url=url,
     prospekt_url=page.url,
     timestamp=timestamp,
+    data={
+      "img_alt_texts": prospekt_images_alt_text_set,
+    },
   )

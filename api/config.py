@@ -34,7 +34,10 @@ MOUSE_CLICK_HOLD_MAX_MS = 150
 ### SCRAPING CONFIG ###
 SCRAPE_RESULTS_DIR = "./tmp/scrape_results"
 SCRAPE_RESULTS_TTL_SECONDS = 900  # 15 minutes
-ALDI_COOKIE_BANNER_SELECTOR = "#onetrust-reject-all-handler"
 TIMEOUT_SEC_SHORT = 2000
 TIMEOUT_SEC_DEFAULT = 5000
 TIMEOUT_SEC_LONG = 10000
+
+### ALDI WEBSCRAPING ###
+ALDI_COOKIE_BANNER_SELECTOR = "#onetrust-reject-all-handler"
+ALDI_FOOD_ITEM_LIST = ["Macadamia", "Zartbitter", "Lachs", "Rind", "Kaffee", "Hackfleisch"]
