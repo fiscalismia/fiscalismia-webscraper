@@ -12,6 +12,7 @@ dependencies = [
     "python-dotenv",
     "playwright",
     "websockets",
+    "anthropic[aiohttp]"
 ]
 
 [tool.ruff]

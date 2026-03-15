@@ -88,9 +88,13 @@ podman run \
    fiscalismia-webscraper:0.9.2
 ```
 
-## Updating
+## Updating Dependencies
 
 ```bash
+cd ~/git/fiscalismia-webscraper
+source .venv/bin/activate
+pip install --upgrade pip
+pip install pip-tools
 pip-compile --upgrade --generate-hashes --strip-extras --output-file=requirements.txt pyproject.toml
 ```
 

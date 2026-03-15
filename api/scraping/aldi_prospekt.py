@@ -4,8 +4,19 @@ import asyncio
 import random
 from playwright.async_api import Page, CDPSession, TimeoutError as PlaywrightTimeoutError
 from api.logger import logger
-from api.config import ALDI_COOKIE_BANNER_SELECTOR, TIMEOUT_SEC_SHORT, TIMEOUT_SEC_DEFAULT, TIMEOUT_SEC_LONG
-from api.scraping import ScrapeResult, get_current_week_pattern, build_prospekt_page_urls, respond_with_error
+from api.config import (
+  ALDI_COOKIE_BANNER_SELECTOR,
+  TIMEOUT_SEC_SHORT,
+  TIMEOUT_SEC_DEFAULT,
+  TIMEOUT_SEC_LONG,
+)
+from api.scraping import (
+  ScrapeResult,
+  get_current_week_pattern,
+  build_prospekt_page_urls,
+  respond_with_error,
+)
+from api import anthropic
 
 NETWORK_IDLE = "networkidle"  # DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
 LOADED = "domcontentloaded"
@@ -89,11 +100,14 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     if "2-3" in prospekt_page:
       logger.debug("Skipping pages 2-3 because they only contain an overview")
       continue
+    if "6-7" in prospekt_page:
+      logger.debug("Ending early during test and development")
+      break
     try:
-      await asyncio.sleep(random.triangular(0.50, 0.875, 1.25))
+      await asyncio.sleep(random.triangular(0.75, 1.25, 1.75))
       logger.debug(f"[{session_id}] Going to page {prospekt_page}")
       await page.goto(prospekt_page, timeout=TIMEOUT_SEC_DEFAULT, wait_until=LOADED)
-      await asyncio.sleep(random.triangular(0.50, 0.875, 1.25))
+      await asyncio.sleep(random.triangular(0.50, 1.00, 1.50))
       logger.success(f"[{session_id}] Successfully navigated to page {page.url}")
       await parse_img_alt_text(page, prospekt_page)
     except PlaywrightTimeoutError:
@@ -113,6 +127,31 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     for src in missing_alt:
       logger.warning(f"[{session_id}] Missing alt text for: {src}")
 
+  # 8. Pass scraped alt text to Claude for data extraction
+  # NOTE: The data is unstructured, full of artifacts and varies on a weekly basis
+  # so programmatic extraction would require extensive RegExp and filtering and be unreliable
+  # LLM is neccessarily unreliable in its output, of course, so the improvements over manual exfiltration remain to be tested
+  try:
+    await anthropic.launch_client()
+    llm_response = await anthropic.send_single_message(
+      "Hello Claude, can you output the attached file reference content formatted as json",
+      True,
+      ["file_011CZ5WsCrDv3e9fj2TC3BCi"],
+    )
+    logger.header(llm_response, level=2)
+    # test_bytes: bytes = (
+    #   b'{"products": ['
+    #   b'  {"name": "Widget A", "price": 19.99, "currency": "EUR"},'
+    #   b'  {"name": "Widget B", "price": 24.50, "currency": "EUR"}'
+    #   b"]}"
+    # )
+    # file_upload_response = await anthropic.upload_raw_bytes_as_file("testfile.json", test_bytes)
+    # logger.header(file_upload_response, level=3)
+  except Exception as e:
+    logger.error(f"Error querying LLM endpoint: {e}")
+    raise
+  finally:
+    await anthropic.shutdown_client()
   return ScrapeResult(
     status="success",
     session_id=session_id,

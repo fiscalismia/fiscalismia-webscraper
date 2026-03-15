@@ -3,7 +3,7 @@ from api.logger import logger
 from api.stealth.browser_args import get_stealth_browser_args
 from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT
 
-# Shared Playwright state
+# Global Playwright state
 _playwright = None
 _browser: Browser | None = None
 # Active CDP sessions: session_id -> { page, cdp_session, context }
