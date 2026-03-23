@@ -114,7 +114,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   jwt_result = decode_jwt(token)
   if jwt_result["http_status"] == 200:
     validated_jwt.set()
-    logger.debug("Successfully validated initial token received via websocket.receive_text().")
+    logger.debug("[stream_websocket] Successfully validated initial token received via websocket.receive_text().")
   if not validated_jwt.is_set():
     await logger.ws_error_close(
       websocket, jwt_result.get("error_message", "Websocket Connection could not validate JWT Session Token"), 1008
@@ -134,7 +134,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
     frame_queue.put_nowait(params)
 
   cdp_session.on("Page.screencastFrame", on_screencast_frame)
-  logger.info(f"WebSocket client connected to session {session_id}")
+  logger.info(f"[stream_websocket] WebSocket client connected to session {session_id}")
 
   # start the screencast now that the frame listener is attached
   await cdp_session.send(
@@ -149,7 +149,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   )
 
   page = session["page"]
-  logger.info(f"Starting streaming CDP screencast session {session_id} for url {page.url}")
+  logger.info(f"[stream_websocket] Starting streaming CDP screencast session {session_id} for url {page.url}")
   # force an initial repaint so the compositor emits at least one frame
   await page.evaluate("window.scrollTo(0, 1)")
   await page.evaluate("window.scrollTo(0, 0)")
@@ -162,7 +162,7 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
       except asyncio.TimeoutError:
         # send a keepalive ping; if client is gone, this will raise
         await websocket.send_json({"type": "keepalive"})
-        logger.debug(f"CDP session {session_id} LOL keepalive sent to client.")
+        logger.debug(f"[stream_websocket] CDP session {session_id} LOL keepalive sent to client.")
         continue
 
       # TODO encode metadata into initial bytes and add an offset
@@ -219,6 +219,6 @@ async def stream_websocket(websocket: WebSocket, session_id: str, token: str = Q
   except Exception as e:
     logger.error(f"WebSocket error in session {session_id}: {e}")
   finally:
-    logger.debug("Cleaning up CDP session after CDP route invocation.")
+    logger.debug("[stream_websocket] Cleaning up CDP session after CDP route invocation.")
     stop_event.set()
     await browser.cleanup_session(session_id)

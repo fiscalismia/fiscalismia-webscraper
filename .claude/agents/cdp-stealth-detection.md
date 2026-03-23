@@ -123,7 +123,7 @@ async def dispatch_mouse_click(cdp_session, target_point: tuple, from_point: tup
     """Move to target with humanized path, then click with realistic timing."""
 ```
 
-#### 5. Integrate into `api/websockets/test_cdp.py`
+#### 5. Integrate into `api/websockets/stream_cdp.py`
 
 Modify the WebSocket handler to:
 
@@ -409,9 +409,9 @@ api/
 ├── health_check/
 │   └── ...
 ├── rest/
-│   └── test_cdp.py
+│   └── stream_cdp.py
 ├── websockets/
-│   └── test_cdp.py      # Updated: integrate mouse interpolation pipeline
+│   └── stream_cdp.py      # Updated: integrate mouse interpolation pipeline
 ├── mouse/
 │   ├── __init__.py       # Public API: dispatch_mouse_move(), dispatch_mouse_click()
 │   ├── interpolation.py  # Bezier curve path generation

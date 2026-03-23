@@ -9,9 +9,9 @@ from api.health_check.root_info import router as root_info_router
 from api.health_check.hc import router as health_check_router
 from api.health_check.version import router as version_router
 from api.security import JWTBearer
-from api.rest.test_cdp import router as test_cdp_rest_router
+from api.rest.start_cdp import router as start_cdp_rest_router
 from api.rest.scrape_supermarkets import router as scrape_supermarkets_router
-from api.websockets.test_cdp import router as test_cdp_websocket_router
+from api.websockets.stream_cdp import router as stream_cdp_websocket_router
 from api.logger import set_global_log_level as log_level
 from api.config import SCRAPE_RESULTS_DIR, SCRAPE_RESULTS_TTL_SECONDS
 from api import browser
@@ -81,7 +81,7 @@ fastapi.include_router(version_router, prefix=f"{api.config.BASE_ROUTE}")
 #  |    |  \ \__/  |  |___ \__,  |  |___ |__/    |  \ \__/ \__/  |  |___ .__/
 # see https://testdriven.io/blog/fastapi-jwt-auth/
 fastapi.include_router(
-  test_cdp_rest_router,
+  start_cdp_rest_router,
   dependencies=[Depends(JWTBearer())],
   prefix=f"{api.config.BASE_ROUTE}{api.config.REST_ENDPOINT}",
 )
@@ -91,7 +91,7 @@ fastapi.include_router(
   prefix=f"{api.config.BASE_ROUTE}{api.config.REST_ENDPOINT}",
 )
 # WebSocket router: JWT validated via query param inside the handler (HTTPBearer doesn't support WebSocket)
-fastapi.include_router(test_cdp_websocket_router, prefix=f"{api.config.BASE_ROUTE}{api.config.WEBSOCKET_ENDPOINT}")
+fastapi.include_router(stream_cdp_websocket_router, prefix=f"{api.config.BASE_ROUTE}{api.config.WEBSOCKET_ENDPOINT}")
 
 # Set Log Level for Backend Logs (replacing print statements to stdout)
 log_level(logging.DEBUG)

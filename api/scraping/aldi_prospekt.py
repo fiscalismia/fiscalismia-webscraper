@@ -4,20 +4,21 @@ import asyncio
 import random
 from playwright.async_api import Page, CDPSession, TimeoutError as PlaywrightTimeoutError
 from api.logger import logger
-from api import browser
+import os
 from api.config import (
   ALDI_COOKIE_BANNER_SELECTOR,
   TIMEOUT_SEC_SHORT,
   TIMEOUT_SEC_DEFAULT,
   TIMEOUT_SEC_LONG,
+  SCRAPE_RESULTS_DIR,
+  TIMEOUT_SEC_MAX,
 )
 from api.scraping import (
   ScrapeResult,
   get_current_week_pattern,
-  build_prospekt_page_urls,
+  construct_prospekt_page_urls,
   respond_with_error,
 )
-from api import anthropic
 
 NETWORK_IDLE = "networkidle"  # DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
 LOADED = "domcontentloaded"
@@ -72,9 +73,9 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
 
   # 5. Extract total pagecount of prospekt
   try:
-    current_page_parent = await page.wait_for_selector(".current-page", timeout=TIMEOUT_SEC_SHORT)
-    page_num_span = await page.wait_for_selector(".current-page > .page-numbers", timeout=TIMEOUT_SEC_SHORT)
-    total_page_span = await page.wait_for_selector(".current-page > .total", timeout=TIMEOUT_SEC_SHORT)
+    current_page_parent = await page.wait_for_selector(".current-page", timeout=TIMEOUT_SEC_DEFAULT)
+    page_num_span = await page.wait_for_selector(".current-page > .page-numbers", timeout=TIMEOUT_SEC_DEFAULT)
+    total_page_span = await page.wait_for_selector(".current-page > .total", timeout=TIMEOUT_SEC_DEFAULT)
     pages_label = await current_page_parent.get_attribute("aria-label")
     current_page_str = await page_num_span.inner_text()
     total_page_str = await total_page_span.inner_text()
@@ -85,7 +86,7 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     current_page = int(current_page_str)
     logger.info(f"Current page(s) = [{current_page}] and total pages = [{total_pages}]")
   except PlaywrightTimeoutError:
-    logger.warning(f"[{session_id}] Error retrieving total page count. Continue...")
+    return respond_with_error(session_id, page.url, "Error retrieving total page count. Timeout.")
   except ValueError:
     return respond_with_error(session_id, page.url, f"total_pages {total_pages} could not be converted to a number'")
   except LookupError:
@@ -96,7 +97,7 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
   logger.success(f"[{session_id}] Navigated to prospekt: {current_url}")
 
   # 6. Navigate in a loop to next page until the end has been reached - rate limit self to avoid spam
-  build_prospekt_page_urls(current_url, 1, total_pages, prospekt_page_urls)
+  construct_prospekt_page_urls(current_url, 1, total_pages, prospekt_page_urls)
   for prospekt_page in prospekt_page_urls:
     if "2-3" in prospekt_page:
       logger.debug("Skipping pages 2-3 because they only contain an overview")
@@ -128,40 +129,65 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     for src in missing_alt:
       logger.warning(f"[{session_id}] Missing alt text for: {src}")
 
-  # 8. Pass scraped alt text to Claude for data extraction
+  # 8. Download prospekt .pdf to add as context to LLM in addition to scraped data
+  pdf_download_link = await page.wait_for_selector("#downloadAsPdf", timeout=TIMEOUT_SEC_SHORT)
+  pdf_download_url = await pdf_download_link.get_attribute("href")
+  if ".pdf" not in pdf_download_url:
+    return respond_with_error(session_id, page.url, f"PDF Download url could not be extracted: {pdf_download_url}")
+  logger.debug(f"Downloading PDF via URL {pdf_download_url}")
+  async with page.expect_download(timeout=TIMEOUT_SEC_MAX) as download_info:
+    await pdf_download_link.click()
+  pdf = await download_info.value
+  filename = f"aldi_prospekt_{session_id}.pdf"
+  filepath = os.path.join(SCRAPE_RESULTS_DIR, filename)
+  await pdf.save_as(filepath)
+  if not os.path.exists(filepath) or not os.path.isfile(filepath):
+    return respond_with_error(session_id, page.url, f"PDF could not be persisted to tmpfs in {filepath}")
+  logger.debug(f"PDF {filename} saved to RAM in tmpfs path {SCRAPE_RESULTS_DIR}")
+  logger.debug(f"PDF stats are {os.stat(filepath)}")
+  # Validates PDF file persisted in memory
+  with open(filepath, "rb") as f:
+    header = f.read(8)  # reads first 8 bytes
+    if not header.startswith(b"%PDF"):
+      logger.warning(f"[{session_id}] Cookie banner not found within timeout, Continue...")
+    else:
+      version = header.decode("ascii", errors="replace").strip()
+      logger.success(f"Valid PDF: {version} read from {filepath}")
+
+  # 9. Pass scraped alt text to Claude for data extraction
   # NOTE: The data is unstructured, full of artifacts and varies on a weekly basis
   # so programmatic extraction would require extensive RegExp and filtering and be unreliable
-  # LLM is neccessarily unreliable in its output, of course, so the improvements over manual exfiltration remain to be tested
-  try:
-    await anthropic.launch_client()
-    llm_response = await anthropic.send_single_message(
-      """Hello Claude, can you output the two attached files referenced with their filenames
-      and content formatted as json analyzing any diffs between them with a comment explaining the findings""",
-      True,
-      ["file_011CZ5WsCrDv3e9fj2TC3BCi", "file_011CZKfndwZ3jXxsNRatXgQa"],
-    )
-    logger.header(llm_response, level=2)
-    upload_bytes: bytes = (
-      b'{"products": ['
-      b'  {"name": "Widget A", "price": 19.99, "currency": "EUR"},'
-      b'  {"name": "Widget B", "price": 24.50, "currency": "EUR"}'
-      b"]}"
-    )
-    upload_file_name = "testfile.json"
-    file_upload_response = await anthropic.upload_raw_bytes_as_file(upload_file_name, upload_bytes)
-    # Pydantic models do not have a .get method since they are not dictionaries, use getattr instead
-    file_id = getattr(file_upload_response, "id", None)
-    file_name = getattr(file_upload_response, "filename", None)
-    if not file_id or not file_name or file_name != upload_file_name:
-      return respond_with_error(
-        session_id, page.url, f"anthropic file_id {file_id} file_name {file_name} mismatch. Aborted."
-      )
-    logger.success(f"file {file_name} with id [{file_id}] uploaded successfully")
-  except Exception as e:
-    logger.error(f"Error querying LLM endpoint: {e}")
-    raise
-  finally:
-    await anthropic.shutdown_client()
+  # try:
+  #   await anthropic.launch_client()
+  #   llm_response = await anthropic.send_single_message(
+  #     """Hello Claude, can you output the two attached files referenced with their filenames
+  #     and content formatted as json analyzing any diffs between them with a comment explaining the findings""",
+  #     True,
+  #     ["file_011CZ5WsCrDv3e9fj2TC3BCi", "file_011CZKfndwZ3jXxsNRatXgQa"],
+  #   )
+  #   logger.header(llm_response, level=2)
+  #   upload_bytes: bytes = (
+  #     b'{"products": ['
+  #     b'  {"name": "Widget A", "price": 19.99, "currency": "EUR"},'
+  #     b'  {"name": "Widget B", "price": 24.50, "currency": "EUR"}'
+  #     b"]}"
+  #   )
+  #   upload_file_name = "testfile.json"
+  #   file_upload_response = await anthropic.upload_raw_bytes_as_file(upload_file_name, upload_bytes)
+  #   # Pydantic models do not have a .get method since they are not dictionaries, use getattr instead
+  #   file_id = getattr(file_upload_response, "id", None)
+  #   file_name = getattr(file_upload_response, "filename", None)
+  #   if not file_id or not file_name or file_name != upload_file_name:
+  #     return respond_with_error(
+  #       session_id, page.url, f"anthropic file_id {file_id} file_name {file_name} mismatch. Aborted."
+  #     )
+  #   logger.success(f"file {file_name} with id [{file_id}] uploaded successfully")
+  # except Exception as e:
+  #   logger.error(f"Error querying LLM endpoint: {e}")
+  #   raise
+  # finally:
+  #   await anthropic.shutdown_client()
+
   return ScrapeResult(
     status="success",
     session_id=session_id,

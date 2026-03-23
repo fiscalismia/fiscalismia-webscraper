@@ -25,7 +25,7 @@ def get_current_week_pattern() -> str:
   return f"kw{iso.week}-{iso.year % 100:02d}"
 
 
-def build_prospekt_page_urls(prospekt_url: str, start_page: int, total_pages: int, prospekt_page_urls: list[str]):
+def construct_prospekt_page_urls(prospekt_url: str, start_page: int, total_pages: int, prospekt_page_urls: list[str]):
   """Builds a collection of urls to navigate, since clicking the next button is error-prone"""
   increment_by = 2
   slice_str = "/page/"

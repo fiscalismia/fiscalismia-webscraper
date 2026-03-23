@@ -49,8 +49,8 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 - `config.py` — Constants (route prefixes, global timeout, CDP screencast parameters: JPEG quality 50, 1600x900, viewport dimensions, mouse movement tuning, stealth WebGL spoofing)
 - `security.py` — `JWTBearer` dependency class and `decode_jwt()`. Protected routes use `dependencies=[Depends(JWTBearer())]`
 - `health_check/` — Unprotected `/hc` (health status, uptime, version) and `/version` endpoints
-- `rest/test_cdp.py` — JWT-protected REST router: `POST /cdp/start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
-- `websockets/test_cdp.py` — WebSocket router (auth via query param): `WS /session/{session_id}?token=<jwt>` — streams CDP screencast frames (base64 JPEG in JSON) over WebSocket with 10s keepalive ping
+- `rest/stream_cdp.py` — JWT-protected REST router: `POST /cdp/start` — creates a headless Chromium page, navigates to a URL, returns a `session_id`
+- `websockets/stream_cdp.py` — WebSocket router (auth via query param): `WS /session/{session_id}?token=<jwt>` — streams CDP screencast frames (base64 JPEG in JSON) over WebSocket with 10s keepalive ping
 - `logger.py` — Singleton `ColoredLogger` with custom ANSI formatting (Europe/Berlin timezone)
 - `colors.py` — ANSI escape code definitions
 - `stealth/` — Anti-bot-detection hardening: `browser_args.py` (Chrome launch flags to disable automation signals), `js_patches.py` (JS injections for navigator.webdriver, chrome.runtime, plugins, permissions, WebGL), `cdp_patches.py` (CDP-level script injection via Page.addScriptToEvaluateOnNewDocument). `apply_stealth(page, cdp_session)` is the public API

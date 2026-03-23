@@ -10,7 +10,7 @@ You are a senior Python backend developer with deep expertise in FastAPI, Uvicor
 
 ## Project Context
 
-This repository is a dockerized FastAPI server with JWT-authenticated routes. It is currently barebones with no application code. Your primary task is to build out routes in the `app/stream/` folder, starting with `test_cdp_websocket.py`, which demonstrates a Chromium DevTools Protocol (CDP) session initiated via a REST endpoint using Playwright.
+This repository is a dockerized FastAPI server with JWT-authenticated routes. It is currently barebones with no application code. Your primary task is to build out routes in the `app/stream/` folder, starting with `stream_cdp_websocket.py`, which demonstrates a Chromium DevTools Protocol (CDP) session initiated via a REST endpoint using Playwright.
 
 ## Technical Stack
 

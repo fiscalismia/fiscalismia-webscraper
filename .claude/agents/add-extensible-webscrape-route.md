@@ -95,8 +95,8 @@ Inspect these files before starting:
 - `api/config.py` — Route prefix constants, CDP/viewport config
 - `api/browser.py` — Browser lifecycle, `new_page()`
 - `api/security.py` — `JWTBearer` dependency
-- `api/rest/test_cdp.py` — Existing CDP start handler (pattern to follow)
-- `api/websockets/test_cdp.py` — Existing WebSocket handler
+- `api/rest/stream_cdp.py` — Existing CDP start handler (pattern to follow)
+- `api/websockets/stream_cdp.py` — Existing WebSocket handler
 - `api/stealth/` — `apply_stealth()` usage
 - Frontend: `src/components/content/admin_WebscrapeSupermarkets.tsx`
 - Frontend: `src/components/minor/Websocket_CDP_Canvas.tsx`
