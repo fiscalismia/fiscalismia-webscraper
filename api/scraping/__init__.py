@@ -3,6 +3,10 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel
 from api.logger import logger
 
+# DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
+PLAYWRIGHT_STATE_NETWORK_IDLE = "networkidle"
+PLAYWRIGHT_STATE_LOADED = "domcontentloaded"
+
 
 class ScrapeResult(BaseModel):
   status: str

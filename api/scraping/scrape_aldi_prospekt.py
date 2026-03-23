@@ -18,18 +18,32 @@ from api.scraping import (
   get_current_week_pattern,
   construct_prospekt_page_urls,
   respond_with_error,
+  PLAYWRIGHT_STATE_LOADED,
 )
 
-NETWORK_IDLE = "networkidle"  # DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
-LOADED = "domcontentloaded"
 prospekt_page_urls: list[str] = []
 prospekt_images_alt_text_dict: dict[str, str] = {}
 prospekt_images_alt_text_set: set[str] = set()
+prospekt_image_url_set: set[str] = set()
 
 
 async def parse_img_alt_text(page: Page, url: str):
   """Parses all alt text (for screen readers) of prospekt images and adds it to a set for later processing"""
   logger.debug(f"Extracting images in pages {url}")
+  query_selector = 'img.left, img.right, img[src*="prospekt.aldi-sued"]'
+  await page.wait_for_selector(query_selector, timeout=TIMEOUT_SEC_SHORT)
+  images = await page.query_selector_all(query_selector)
+  logger.debug(f"Found {len(images)} image elements")
+  for img in images:
+    alt = await img.get_attribute("alt")
+    src = await img.get_attribute("src")
+    prospekt_images_alt_text_dict[src] = alt
+    prospekt_images_alt_text_set.add(alt)
+
+
+async def parse_img_urls(page: Page, url: str):
+  """Parses all img elements within given prospekt page and adds it to a set for later processing"""
+  logger.debug(f"Extracting image urls in pages {url}")
   query_selector = 'img.left, img.right, img[src*="prospekt.aldi-sued"]'
   await page.wait_for_selector(query_selector, timeout=TIMEOUT_SEC_SHORT)
   images = await page.query_selector_all(query_selector)
@@ -97,7 +111,9 @@ async def scrape_aldi_prospekt(
   url: str,
   download_pdf: bool = False,
 ) -> ScrapeResult:
-  """Navigate the Aldi prospekt page, dismiss cookies, and find the current week's prospekt link."""
+  """Navigate the Aldi prospekt page, dismiss cookies, and find the current week's prospekt link.
+  Loop through pages with a random delay as rate limit, extract alt texts and collect prospekt img urls
+  Optionally download the prospekt PDF into memory for later text extraction and OCR reading"""
   timestamp = datetime.now(ZoneInfo("Europe/Berlin")).isoformat()
 
   # 1. Dismiss cookie banner
@@ -109,7 +125,7 @@ async def scrape_aldi_prospekt(
     logger.warning(f"[{session_id}] Cookie banner not found within timeout, Continue...")
 
   # 2. Wait for stable state
-  await page.wait_for_load_state(LOADED, timeout=TIMEOUT_SEC_DEFAULT)
+  await page.wait_for_load_state(PLAYWRIGHT_STATE_LOADED, timeout=TIMEOUT_SEC_DEFAULT)
 
   # 3. Find prospekt link for current week
   pattern = get_current_week_pattern()
@@ -123,7 +139,7 @@ async def scrape_aldi_prospekt(
   # 4. Remove target="_blank" and click to stay in same tab (preserves CDP screencast)
   await page.evaluate(f"document.querySelector('{query_selector}').removeAttribute(\"target\")")
   await link.click()
-  await page.wait_for_load_state(LOADED, timeout=TIMEOUT_SEC_DEFAULT)
+  await page.wait_for_load_state(PLAYWRIGHT_STATE_LOADED, timeout=TIMEOUT_SEC_DEFAULT)
   await asyncio.sleep(1)
 
   # 5. Extract total pagecount of prospekt
@@ -152,6 +168,7 @@ async def scrape_aldi_prospekt(
   logger.success(f"[{session_id}] Navigated to prospekt: {current_url}")
 
   # 6. Navigate in a loop to next page until the end has been reached - rate limit self to avoid spam
+  # extract alt text and img urls and add to module level variables - NOTE: this limits concurrency to 1
   construct_prospekt_page_urls(current_url, 1, total_pages, prospekt_page_urls)
   for prospekt_page in prospekt_page_urls:
     if "2-3" in prospekt_page:
@@ -163,10 +180,12 @@ async def scrape_aldi_prospekt(
     try:
       await asyncio.sleep(random.triangular(0.75, 1.25, 1.75))
       logger.debug(f"[{session_id}] Going to page {prospekt_page}")
-      await page.goto(prospekt_page, timeout=TIMEOUT_SEC_DEFAULT, wait_until=LOADED)
+      await page.goto(prospekt_page, timeout=TIMEOUT_SEC_DEFAULT, wait_until=PLAYWRIGHT_STATE_LOADED)
       await asyncio.sleep(random.triangular(0.50, 1.00, 1.50))
       logger.success(f"[{session_id}] Successfully navigated to page {page.url}")
+      # Extract relevant information from pages to module level data structures
       await parse_img_alt_text(page, prospekt_page)
+      await parse_img_urls(page, prospekt_page)
     except PlaywrightTimeoutError:
       logger.warning(f"[{session_id}] Next page navigation timed out. Continue...")
       break
@@ -184,46 +203,12 @@ async def scrape_aldi_prospekt(
     for src in missing_alt:
       logger.warning(f"[{session_id}] Missing alt text for: {src}")
 
-  # 8. Optionally download prospekt PDF (≈70 MB) for LLM context
+  # 8. Optionally download prospekt PDF (≈70 MB) for text extraction / OCR reading
   pdf_filepath: str | None = None
   if download_pdf:
     pdf_filepath = await download_prospekt_pdf(page, session_id)
     if pdf_filepath is None:
       return respond_with_error(session_id, page.url, "PDF download was requested but failed.")
-
-  # 9. Pass scraped alt text to Claude for data extraction
-  # NOTE: The data is unstructured, full of artifacts and varies on a weekly basis
-  # so programmatic extraction would require extensive RegExp and filtering and be unreliable
-  # try:
-  #   await anthropic.launch_client()
-  #   llm_response = await anthropic.send_single_message(
-  #     """Hello Claude, can you output the two attached files referenced with their filenames
-  #     and content formatted as json analyzing any diffs between them with a comment explaining the findings""",
-  #     True,
-  #     ["file_011CZ5WsCrDv3e9fj2TC3BCi", "file_011CZKfndwZ3jXxsNRatXgQa"],
-  #   )
-  #   logger.header(llm_response, level=2)
-  #   upload_bytes: bytes = (
-  #     b'{"products": ['
-  #     b'  {"name": "Widget A", "price": 19.99, "currency": "EUR"},'
-  #     b'  {"name": "Widget B", "price": 24.50, "currency": "EUR"}'
-  #     b"]}"
-  #   )
-  #   upload_file_name = "testfile.json"
-  #   file_upload_response = await anthropic.upload_raw_bytes_as_file(upload_file_name, upload_bytes)
-  #   # Pydantic models do not have a .get method since they are not dictionaries, use getattr instead
-  #   file_id = getattr(file_upload_response, "id", None)
-  #   file_name = getattr(file_upload_response, "filename", None)
-  #   if not file_id or not file_name or file_name != upload_file_name:
-  #     return respond_with_error(
-  #       session_id, page.url, f"anthropic file_id {file_id} file_name {file_name} mismatch. Aborted."
-  #     )
-  #   logger.success(f"file {file_name} with id [{file_id}] uploaded successfully")
-  # except Exception as e:
-  #   logger.error(f"Error querying LLM endpoint: {e}")
-  #   raise
-  # finally:
-  #   await anthropic.shutdown_client()
 
   return ScrapeResult(
     status="success",
@@ -234,5 +219,6 @@ async def scrape_aldi_prospekt(
     data={
       "img_alt_texts": prospekt_images_alt_text_set,
       "pdf_filepath": pdf_filepath,
+      "img_download_urls": prospekt_image_url_set,
     },
   )
