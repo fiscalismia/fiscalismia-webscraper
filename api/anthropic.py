@@ -11,6 +11,7 @@ from anthropic import (
   AuthenticationError,
   PermissionDeniedError,
 )
+from anthropic.types.beta import FileMetadata
 from api.config import ASNYC_MESSAGING_MODEL_DEFAULT
 from api.logger import logger
 
@@ -120,14 +121,14 @@ async def send_single_message(content: str, file_beta_tag: bool = False, file_id
     raise
 
 
-async def upload_raw_bytes_as_file(filename: str, file_bytes: bytes):
+async def upload_raw_bytes_as_file(filename: str, file_bytes: bytes) -> FileMetadata:
   """Uploads File for storage and processing in Claude's API Platform"""
   llm_client = await get_client()
   logger.debug(
     f"Anthropic upload_raw_bytes_as_file request received with filename {filename} and content length {len(file_bytes)}bytes"
   )
   try:
-    upload_response = await llm_client.beta.files.upload(
+    upload_response: FileMetadata = await llm_client.beta.files.upload(
       file=(filename, file_bytes, "text/plain"),
       betas=["files-api-2025-04-14"],
     )
