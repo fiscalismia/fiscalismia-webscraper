@@ -12,6 +12,7 @@ from api.scraping import ScrapeResult
 from api.stealth import apply_stealth
 from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT, SCRAPE_RESULTS_DIR, BASE_ROUTE, REST_ENDPOINT
 from api.scraping.scrape_aldi_prospekt import scrape_aldi_prospekt
+from api.scraping.etl_aldi_prospekt import etl_aldi_prospekt
 
 router = APIRouter()
 
@@ -103,3 +104,15 @@ async def get_scrape_results(session_id: str):
   if session_id in browser.sessions:
     raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Scraping in progress")
   raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+
+@router.post("/cdp/scrape/etl/aldi/{session_id}")
+async def start_etl_on_aldi_results(session_id: str):
+  """Use scraping results as input for running sanitization and transformations for a given session."""
+  logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/etl/aldi/{session_id} received a query")
+  filepath = os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json")
+  if not os.path.isfile(filepath):
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Results JSON for session not found")
+  if session_id in browser.sessions:
+    raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Scraping in progress")
+  return await etl_aldi_prospekt(session_id, filepath)

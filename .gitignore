@@ -213,3 +213,4 @@ wrapt-2.1.1-py3-none-any.whl
 pip_system_certs-5.3-py3-none-any.whl
 pip.ini
 ./pip/
+scrape_results/
