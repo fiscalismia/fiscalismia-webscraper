@@ -2,7 +2,6 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from pydantic import BaseModel
 from api.logger import logger
-from api import browser
 
 
 class ScrapeResult(BaseModel):
@@ -38,11 +37,10 @@ def build_prospekt_page_urls(prospekt_url: str, start_page: int, total_pages: in
     prospekt_page_urls.append(next_prospekt_url)
 
 
-async def respond_with_error(session_id: str, url: str, error_msg: str):
+def respond_with_error(session_id: str, url: str, error_msg: str):
   """Returns error Object for logging to output file"""
   timestamp = datetime.now(ZoneInfo("Europe/Berlin")).isoformat()
   logger.error(f"[{session_id}] ${error_msg}")
-  await browser.cleanup_session(session_id)
   return ScrapeResult(
     status="error",
     session_id=session_id,

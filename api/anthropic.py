@@ -44,11 +44,11 @@ async def get_client() -> AsyncAnthropic:
   return _anthropic_client
 
 
-async def send_single_message(content: str, file_beta_tag: bool = False, file_ids: list[str] = None):
+async def send_single_message(message: str, file_beta_tag: bool = False, file_ids: list[str] = None):
   """Simple Synchronous Message Response received by sending structured prompts"""
   llm_client = await get_client()
   logger.debug(
-    f"Anthropic send_single_message {f'FILE_BETA={file_ids}' if file_beta_tag else ''} request received with content length {len(content)}"
+    f"Anthropic send_single_message {f'FILE_BETA={file_ids}' if file_beta_tag else ''} request received with content length {len(message)}"
   )
   try:
     if file_beta_tag:
@@ -59,18 +59,14 @@ async def send_single_message(content: str, file_beta_tag: bool = False, file_id
         logger.warning("file_ids received as str, wrapping in list")
         file_ids = [file_ids]
       # FILE ADDED METADATA TO ENRICH THE REQUEST CONTEXT
+      content_collection = [
+        {"type": "document", "source": {"type": "file", "file_id": file_id}} for file_id in file_ids
+      ]
+      content_collection.append({"type": "text", "text": message})
       message = await llm_client.beta.messages.create(
         max_tokens=1024,
         betas=["files-api-2025-04-14"],
-        messages=[
-          {
-            "role": "user",
-            "content": [
-              {"type": "document", "source": {"type": "file", "file_id": file_ids[0]}},
-              {"type": "text", "text": content},
-            ],
-          }
-        ],
+        messages=[{"role": "user", "content": content_collection}],
         model=ASNYC_MESSAGING_MODEL_DEFAULT,
       )
     else:
@@ -80,7 +76,7 @@ async def send_single_message(content: str, file_beta_tag: bool = False, file_id
         messages=[
           {
             "role": "user",
-            "content": content,
+            "content": message,
           }
         ],
         model=ASNYC_MESSAGING_MODEL_DEFAULT,
