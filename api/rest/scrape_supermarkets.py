@@ -34,7 +34,7 @@ async def _run_scrape(session_id: str, url: str):
       return
     page = session["page"]
     cdp_session = session["cdp_session"]
-    result = await scrape_aldi_prospekt(page, cdp_session, session_id, url)
+    result = await scrape_aldi_prospekt(page, cdp_session, session_id, url, True)
   except Exception as e:
     logger.error(f"[{session_id}] Scraping failed with exception: {e}")
     result = ScrapeResult(

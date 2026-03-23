@@ -41,7 +41,62 @@ async def parse_img_alt_text(page: Page, url: str):
     prospekt_images_alt_text_set.add(alt)
 
 
-async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: str, url: str) -> ScrapeResult:
+async def download_prospekt_pdf(page: Page, session_id: str) -> str | None:
+  """Download the prospekt PDF from the current page.
+
+  Returns the filepath on success, or None on failure.
+  Callers should check the return value before relying on the file.
+  """
+  try:
+    pdf_download_link = await page.wait_for_selector("#downloadAsPdf", timeout=TIMEOUT_SEC_SHORT)
+  except PlaywrightTimeoutError:
+    logger.warning(f"[{session_id}] PDF download button not found within timeout.")
+    return None
+
+  pdf_download_url = await pdf_download_link.get_attribute("href")
+  if not pdf_download_url or ".pdf" not in pdf_download_url:
+    logger.error(f"[{session_id}] PDF download URL could not be extracted: {pdf_download_url}")
+    return None
+
+  logger.debug(f"[{session_id}] Downloading PDF via URL {pdf_download_url}")
+  try:
+    async with page.expect_download(timeout=TIMEOUT_SEC_MAX) as download_info:
+      await pdf_download_link.click()
+    pdf = await download_info.value
+  except PlaywrightTimeoutError:
+    logger.error(f"[{session_id}] PDF download timed out.")
+    return None
+
+  filename = f"aldi_prospekt_{session_id}.pdf"
+  filepath = os.path.join(SCRAPE_RESULTS_DIR, filename)
+  await pdf.save_as(filepath)
+
+  if not os.path.isfile(filepath):
+    logger.error(f"[{session_id}] PDF could not be persisted to tmpfs at {filepath}")
+    return None
+
+  logger.debug(f"[{session_id}] PDF {filename} saved to RAM in tmpfs path {SCRAPE_RESULTS_DIR}")
+  logger.debug(f"[{session_id}] PDF stats: {os.stat(filepath)}")
+
+  # Validate the PDF magic bytes
+  with open(filepath, "rb") as f:
+    header = f.read(8)
+    if not header.startswith(b"%PDF"):
+      logger.error(f"[{session_id}] File at {filepath} is not a valid PDF (bad magic bytes).")
+      return None
+    version = header.decode("ascii", errors="replace").strip()
+    logger.success(f"[{session_id}] Valid PDF: {version} read from {filepath}")
+
+  return filepath
+
+
+async def scrape_aldi_prospekt(
+  page: Page,
+  cdp_session: CDPSession,
+  session_id: str,
+  url: str,
+  download_pdf: bool = False,
+) -> ScrapeResult:
   """Navigate the Aldi prospekt page, dismiss cookies, and find the current week's prospekt link."""
   timestamp = datetime.now(ZoneInfo("Europe/Berlin")).isoformat()
 
@@ -129,30 +184,12 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     for src in missing_alt:
       logger.warning(f"[{session_id}] Missing alt text for: {src}")
 
-  # 8. Download prospekt .pdf to add as context to LLM in addition to scraped data
-  pdf_download_link = await page.wait_for_selector("#downloadAsPdf", timeout=TIMEOUT_SEC_SHORT)
-  pdf_download_url = await pdf_download_link.get_attribute("href")
-  if ".pdf" not in pdf_download_url:
-    return respond_with_error(session_id, page.url, f"PDF Download url could not be extracted: {pdf_download_url}")
-  logger.debug(f"Downloading PDF via URL {pdf_download_url}")
-  async with page.expect_download(timeout=TIMEOUT_SEC_MAX) as download_info:
-    await pdf_download_link.click()
-  pdf = await download_info.value
-  filename = f"aldi_prospekt_{session_id}.pdf"
-  filepath = os.path.join(SCRAPE_RESULTS_DIR, filename)
-  await pdf.save_as(filepath)
-  if not os.path.exists(filepath) or not os.path.isfile(filepath):
-    return respond_with_error(session_id, page.url, f"PDF could not be persisted to tmpfs in {filepath}")
-  logger.debug(f"PDF {filename} saved to RAM in tmpfs path {SCRAPE_RESULTS_DIR}")
-  logger.debug(f"PDF stats are {os.stat(filepath)}")
-  # Validates PDF file persisted in memory
-  with open(filepath, "rb") as f:
-    header = f.read(8)  # reads first 8 bytes
-    if not header.startswith(b"%PDF"):
-      logger.warning(f"[{session_id}] Cookie banner not found within timeout, Continue...")
-    else:
-      version = header.decode("ascii", errors="replace").strip()
-      logger.success(f"Valid PDF: {version} read from {filepath}")
+  # 8. Optionally download prospekt PDF (≈70 MB) for LLM context
+  pdf_filepath: str | None = None
+  if download_pdf:
+    pdf_filepath = await download_prospekt_pdf(page, session_id)
+    if pdf_filepath is None:
+      return respond_with_error(session_id, page.url, "PDF download was requested but failed.")
 
   # 9. Pass scraped alt text to Claude for data extraction
   # NOTE: The data is unstructured, full of artifacts and varies on a weekly basis
@@ -196,5 +233,6 @@ async def scrape_aldi_prospekt(page: Page, cdp_session: CDPSession, session_id: 
     timestamp=timestamp,
     data={
       "img_alt_texts": prospekt_images_alt_text_set,
+      "pdf_filepath": pdf_filepath,
     },
   )
