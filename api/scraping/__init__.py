@@ -44,7 +44,7 @@ def construct_prospekt_page_urls(prospekt_url: str, start_page: int, total_pages
 def respond_with_error(session_id: str, url: str, error_msg: str):
   """Returns error Object for logging to output file"""
   timestamp = datetime.now(ZoneInfo("Europe/Berlin")).isoformat()
-  logger.error(f"[{session_id}] ${error_msg}")
+  logger.error(f"[{session_id}] {error_msg}")
   return ScrapeResult(
     status="error",
     session_id=session_id,

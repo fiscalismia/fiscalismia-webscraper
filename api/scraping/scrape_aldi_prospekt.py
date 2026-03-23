@@ -61,6 +61,7 @@ async def download_prospekt_pdf(page: Page, session_id: str) -> str | None:
   Returns the filepath on success, or None on failure.
   Callers should check the return value before relying on the file.
   """
+  logger.debug("PDF Download logic initiated. Scraping for URL...")
   try:
     pdf_download_link = await page.wait_for_selector("#downloadAsPdf", timeout=TIMEOUT_SEC_SHORT)
   except PlaywrightTimeoutError:
@@ -90,7 +91,15 @@ async def download_prospekt_pdf(page: Page, session_id: str) -> str | None:
     return None
 
   logger.debug(f"[{session_id}] PDF {filename} saved to RAM in tmpfs path {SCRAPE_RESULTS_DIR}")
-  logger.debug(f"[{session_id}] PDF stats: {os.stat(filepath)}")
+  stat_info = os.stat(filepath)
+  stat_info.st_size  # File size in bytes (same as getsize)
+  stat_info.st_mode  # File permissions + type bits
+  stat_info.st_mtime  # Last modification time (epoch float)
+  stat_info.st_uid  # Owner user ID
+  stat_info.st_gid  # Owner group ID
+  stat_info.st_ino  # Inode number
+  stat_info.st_dev  # Device ID (identifies the filesystem)
+  logger.debug(f"[{session_id}] PDF stats: {stat_info}")
 
   # Validate the PDF magic bytes
   with open(filepath, "rb") as f:
