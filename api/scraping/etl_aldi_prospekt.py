@@ -49,6 +49,7 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
     input_img_cnt: int = len(list(input_imgs))
     input_alt_texts: dict = input_img_dict.values()
     input_alt_text_bytes: int = sum(len(v) for v in input_alt_texts)
+    input_alt_text_lines: int = sum(len(v.splitlines()) for v in input_alt_texts)
     # fmt: off
     # Count all food keyword occurences across the entire dataset /w list comprehension
     input_food_keyword_cnt: int = sum(
@@ -102,10 +103,31 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
   #                 ___     ___        ___  ___  __   __
   #    |    | |\ | |__     |__  | |     |  |__  |__) /__`
   #    |___ | | \| |___    |    | |___  |  |___ |  \ .__/
-  # 5. APPLY LINE FILTERS
+  # 5. APPLY LINE FILTER
+  for img_src, alt_text in output_img_dict.items():
+    for line in alt_text.splitlines():
+      if not line.strip():
+        # ignore empty lines
+        continue
+      legal_boilerplate = {
+        "Aktionsartikel im Unterschied",
+        "begrenzter Anzahl zur Verfügung",
+        "Aktionsbeginn ausverkauft",
+        "Alle Artikel ohne Dekoration",
+        "Artikel teilweise mit Serviervorschlägen",
+        "Preis gültig im Aktionszeitraum",
+      }
+      if any(p in line for p in legal_boilerplate):
+        # ignore legal boilerplate lines
+        continue
+      if "Haltungsform" in line and ("Umstellungsphase" in line or "Kennzeichnung" in line):
+        # ignore haltungsform lines
+        continue
+      if "ALDI SÜD Dienstleistungs" in line or "Burgstraße 37" in line or "Burgstr. 37" in line:
+        # ignore aldi_address lines
+        continue
 
-  # legal_boilerplate any(p in line for p in patterns) "Aktionsartikel im Unterschied","begrenzter Anzahl zur Verfügung", "Aktionsbeginn ausverkauft", "Alle Artikel ohne Dekoration", "Artikel teilweise mit Serviervorschlägen", "Preis gültig im Aktionszeitraum",
-  # haltungsform "Haltungsform" in line and ("Umstellungsphase" in line or "Kennzeichnung" in line)
+  #
   # aldi_address "ALDI SÜD Dienstleistungs" in line or "Burgstraße 37" in line or "Burgstr. 37" in line
   # ki_artifacts "Hintergrund KI-generiert", "KI-generiert"
   # trademark any(ind in line for ind in indicators) "©", "Licensed by", "Licensed through", "trademarks", "™ designate"
@@ -120,6 +142,7 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
 
   output_img_cnt: int = len(list(output_img_dict.keys()))
   output_alt_text_bytes: int = sum(len(v) for v in output_img_dict.values())
+  output_alt_text_lines: int = sum(len(v.splitlines()) for v in output_img_dict.values())
   output_food_keyword_cnt: int = sum(
     alt_text.lower().count(keywrd.lower()) for keywrd in ALDI_FOOD_KEYWORDS for alt_text in output_img_dict.values()
   )
@@ -178,10 +201,12 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
       "etl_statistics": {
         "input_img_cnt": input_img_cnt,
         "input_alt_text_bytes": input_alt_text_bytes,
+        "input_alt_text_lines": input_alt_text_lines,
         "input_food_keyword_cnt": input_food_keyword_cnt,
         "input_nonfood_keyword_cnt": input_nonfood_keyword_cnt,
         "output_img_cnt": output_img_cnt,
         "output_alt_text_bytes": output_alt_text_bytes,
+        "output_alt_text_lines": output_alt_text_lines,
         "output_food_keyword_cnt": output_food_keyword_cnt,
         "output_nonfood_keyword_cnt": output_nonfood_keyword_cnt,
       },
