@@ -14,8 +14,8 @@ from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT, SCRAPE_R
 from api.scraping.scrape_aldi_prospekt import scrape_aldi_prospekt
 from api.scraping.etl_aldi_prospekt import etl_aldi_prospekt
 
-from api.scraping import (
-  validate_filepath,
+from api.security import (
+  validate_scraping_filepath,
 )
 
 router = APIRouter()
@@ -54,7 +54,7 @@ async def _run_scrape(session_id: str, url: str):
 
   # WRITE RESULT TO FILE IN MEMORY
   filepath = os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json")
-  with open(filepath, "w") as f:
+  with open(filepath, "w", encoding="utf-8") as f:
     f.write(result.model_dump_json(indent=2))
   logger.header(f"[{session_id}] Scrape result written to {filepath}")
 
@@ -115,7 +115,7 @@ async def start_etl_on_aldi_results(session_id: str):
   """Use scraping results as input for running sanitization and transformations for a given session."""
   logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/etl/aldi/{session_id} received a query")
   try:
-    filepath = validate_filepath(os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json"))
+    filepath = validate_scraping_filepath(os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json"))
   except Exception as e:
     logger.error(f"Filepath validation failed: {e}")
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Filepath not validated: {str(e)}")

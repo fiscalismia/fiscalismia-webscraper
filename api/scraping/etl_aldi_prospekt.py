@@ -4,14 +4,17 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from api.logger import logger
 from api import anthropic
+from typing import Callable
 from api.scraping import (
   ScrapeResult,
   respond_with_error,
   NON_FOOD_KEYWORDS,
-  ALDI_TRAVEL_MARKERS,
   ALDI_FOOD_KEYWORDS,
+  ALDI_HUB_PAGES,
+  ALDI_TRAVEL_MARKERS,
   ALDI_AWARDS_KEYWORDS,
   ALDI_TALK_KEYWORDS,
+  normalize_alt_text,
 )
 
 
@@ -37,17 +40,22 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
     raise ValueError(f"ValueError: JSON key validation failed for {filepath}")
 
   try:
+    input_img_dict: dict = input["data"]["prospekt_images_src_alt_dict"]
+    output_img_dict: dict = input_img_dict
+
     #     __  ___      ___    __  ___    __   __
-    #    /__`  |   /\   |  | /__`  |  | /  ` /__`
-    #    .__/  |  /~~\  |  | .__/  |  | \__, .__/
-    pages = input["data"]["prospekt_images_src_alt_dict"]
-    raw_total = sum(len(v) for v in pages.keys())
-    return pages[0]
+    #    /__`  |   /\   |  | /__`  |  | /  ` /__`    | |\ |
+    #    .__/  |  /~~\  |  | .__/  |  | \__, .__/    | | \|
+    input_img_cnt: int = len(list(input_img_dict.keys()))
+    input_alt_text_bytes: int = sum(len(v) for v in input_img_dict.values())
   except KeyError as e:
     raise ValueError(f"Missing expected key in JSON structure: {e}") from e
   except TypeError as e:
-    # e.g. if a value is None instead of str, len() fails
     raise ValueError(f"Unexpected data type in JSON structure: {e}") from e
+
+  #     __        __   ___     ___        ___  ___  __   __
+  #    |__)  /\  / _` |__     |__  | |     |  |__  |__) /__`
+  #    |    /~~\ \__> |___    |    | |___  |  |___ |  \ .__/
   # 1. FILTER OUT NON-FOOD PAGES ENTIRELY
 
   # 2. FILTER OUT ALDI-TRAVEL PAGES ENTIRELY
@@ -56,6 +64,30 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
 
   # 4. FILTER OUT ALDI-AWARDS PAGES ENTIRELY
 
+  #                 ___     ___        ___  ___  __   __
+  #    |    | |\ | |__     |__  | |     |  |__  |__) /__`
+  #    |___ | | \| |___    |    | |___  |  |___ |  \ .__/
+  # 5. APPLY LINE FILTERS
+
+  # legal_boilerplate any(p in line for p in patterns) "Aktionsartikel im Unterschied","begrenzter Anzahl zur Verfügung", "Aktionsbeginn ausverkauft", "Alle Artikel ohne Dekoration", "Artikel teilweise mit Serviervorschlägen", "Preis gültig im Aktionszeitraum",
+  # haltungsform "Haltungsform" in line and ("Umstellungsphase" in line or "Kennzeichnung" in line)
+  # aldi_address "ALDI SÜD Dienstleistungs" in line or "Burgstraße 37" in line or "Burgstr. 37" in line
+  # ki_artifacts "Hintergrund KI-generiert", "KI-generiert"
+  # trademark any(ind in line for ind in indicators) "©", "Licensed by", "Licensed through", "trademarks", "™ designate"
+  # kundenmonitor "ServiceBarometer", "Kundenmonitor", "NielsenIQ"
+
+  # 6. NORMALIZE TEXT
+  # normalize_alt_text
+
+  #     __  ___      ___    __  ___    __   __      __       ___
+  #    /__`  |   /\   |  | /__`  |  | /  ` /__`    /  \ |  |  |
+  #    .__/  |  /~~\  |  | .__/  |  | \__, .__/    \__/ \__/  |
+
+  output_img_cnt: int = len(list(output_img_dict.keys()))
+  output_alt_text_bytes: int = sum(len(v) for v in output_img_dict.values())
+  #                       ___  __             __   ___  __   __
+  #    |    |     |\/|     |  |__)  /\  |\ | /__` |__  /  \ |__)  |\/|
+  #    |___ |___  |  |     |  |  \ /~~\ | \| .__/ |    \__/ |  \  |  |
   # Pass scraped alt text to Claude for data extraction
   # NOTE: The data is unstructured, full of artifacts and varies on a weekly basis
   # so programmatic extraction would require extensive RegExp and filtering and be unreliable
@@ -93,16 +125,22 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
       raise
     finally:
       await anthropic.shutdown_client()
-  #
-  return input
+
+  # RETURN SANITIZED DATA AND ETL STATISTICS
   return ScrapeResult(
     status="transformed",
     session_id=session_id,
-    target_url=input["url"],
+    target_url=input["target_url"],
     prospekt_url=input["prospekt_url"],
     timestamp=timestamp,
     data={
-      "prospekt_images_src_alt_dict": "todo",
+      "etl_statistics": {
+        "input_img_cnt": input_img_cnt,
+        "input_alt_text_bytes": input_alt_text_bytes,
+        "output_img_cnt": output_img_cnt,
+        "output_alt_text_bytes": output_alt_text_bytes,
+      },
+      "prospekt_images_src_alt_dict": output_img_dict,
       "optional_pdf_filepath": input["data"]["optional_pdf_filepath"],
     },
   )

@@ -1,9 +1,8 @@
-import os
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pydantic import BaseModel
 from api.logger import logger
-from api.config import SCRAPE_RESULTS_DIR
 
 # DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
 PLAYWRIGHT_STATE_NETWORK_IDLE = "networkidle"
@@ -35,9 +34,15 @@ ALDI_TRAVEL_MARKERS = {
   "Reiseantritt",
   "AKTIVURLAUB",
 }
+ALDI_HUB_PAGES = {
+  "UNSERE GÜNSTIGE WOCHE",
+  "ANGEBOTE DER WOCHE",
+  "ENTDECKE DIE GANZE ALDI WELT",
+  "Entdecke unsere Prospekte",
+}
 ALDI_FOOD_KEYWORDS = {"l-Preis", "kg-Preis", "Packung"}
 ALDI_AWARDS_KEYWORDS = {"PREISSIEGER", "PREISFÜHRER"}
-ALDI_TALK_KEYWORDS = {"ALDI TALK", "alditalk.de"}
+ALDI_TALK_KEYWORDS = {"ALDI TALK", "alditalk.de", "Mbit/s", "SIM-Karte"}
 
 
 class ScrapeResult(BaseModel):
@@ -49,38 +54,13 @@ class ScrapeResult(BaseModel):
   data: dict | None = None
 
 
-def validate_filepath(filepath: str, allowed_extensions: list[str] = [".json"]) -> str:
-  """Resolve and validate the file path against path traversal attacks.
-  - os.path.realpath() resolves symlinks and '..' components,
-    directory traversal payloads like '../../etc/shadow'.
-  - We then check the resolved path starts with our trusted base dir.
-  """
-  MAX_FILE_SIZE_BYTES = 1024 * 1024
-  # Resolve to canonical absolute path (follows symlinks, resolves ..)
-  resolved = os.path.realpath(filepath)
-
-  # Ensure resolved path is under the allowed base directory
-  # os.path.commonpath would also work, but prefix check on
-  # realpath output is the standard pattern
-  if not resolved.startswith(os.path.realpath(SCRAPE_RESULTS_DIR) + os.sep):
-    raise ValueError(f"ValueError: Path escapes allowed base directory: {filepath!r} -> {resolved!r}")
-
-  # Extension check
-  _, ext = os.path.splitext(resolved)
-  if ext.lower() not in allowed_extensions:
-    raise ValueError(f"ValueError: Disallowed file extension: {ext!r}")
-
-  # Existence and size checks
-  if not os.path.isfile(resolved):
-    raise FileNotFoundError(f"FileNotFoundError: No file at resolved path: {resolved!r}")
-
-  file_size = os.path.getsize(resolved)
-  if file_size > MAX_FILE_SIZE_BYTES:
-    raise ValueError(f"ValueError: File too large: {file_size:,} bytes (limit: {MAX_FILE_SIZE_BYTES:,})")
-  if file_size == 0:
-    raise ValueError("ValueError: File is empty")
-
-  return resolved
+def normalize_alt_text(text: str) -> str:
+  """Collapse excessive blank lines and trim trailing whitespace."""
+  # Merge 3+ consecutive newlines into 2
+  text = re.sub(r"\n{3,}", "\n\n", text)
+  # Strip trailing whitespace on each line
+  text = "\n".join(ln.rstrip() for ln in text.split("\n"))
+  return text.strip()
 
 
 def get_current_week_pattern() -> str:

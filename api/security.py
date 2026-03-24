@@ -4,6 +4,41 @@ import traceback
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from api.logger import logger
+from api.config import SCRAPE_RESULTS_DIR
+
+
+def validate_scraping_filepath(filepath: str, allowed_extensions: list[str] = [".json"]) -> str:
+  """Resolve and validate the file path against path traversal attacks.
+  - os.path.realpath() resolves symlinks and '..' components,
+    directory traversal payloads like '../../etc/shadow'.
+  - We then check the resolved path starts with our trusted base dir.
+  """
+  MAX_FILE_SIZE_BYTES = 1024 * 1024
+  # Resolve to canonical absolute path (follows symlinks, resolves ..)
+  resolved = os.path.realpath(filepath)
+
+  # Ensure resolved path is under the allowed base directory
+  # os.path.commonpath would also work, but prefix check on
+  # realpath output is the standard pattern
+  if not resolved.startswith(os.path.realpath(SCRAPE_RESULTS_DIR) + os.sep):
+    raise ValueError(f"ValueError: Path escapes allowed base directory: {filepath!r} -> {resolved!r}")
+
+  # Extension check
+  _, ext = os.path.splitext(resolved)
+  if ext.lower() not in allowed_extensions:
+    raise ValueError(f"ValueError: Disallowed file extension: {ext!r}")
+
+  # Existence and size checks
+  if not os.path.isfile(resolved):
+    raise FileNotFoundError(f"FileNotFoundError: No file at resolved path: {resolved!r}")
+
+  file_size = os.path.getsize(resolved)
+  if file_size > MAX_FILE_SIZE_BYTES:
+    raise ValueError(f"ValueError: File too large: {file_size:,} bytes (limit: {MAX_FILE_SIZE_BYTES:,})")
+  if file_size == 0:
+    raise ValueError("ValueError: File is empty")
+
+  return resolved
 
 
 #            ___    ___  __        ___       __
