@@ -104,34 +104,40 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
   #    |    | |\ | |__     |__  | |     |  |__  |__) /__`
   #    |___ | | \| |___    |    | |___  |  |___ |  \ .__/
   # 5. APPLY LINE FILTER
+  legal_boilerplate = {
+    "Aktionsartikel im Unterschied",
+    "begrenzter Anzahl zur Verfügung",
+    "Aktionsbeginn ausverkauft",
+    "Alle Artikel ohne Dekoration",
+    "Artikel teilweise mit Serviervorschlägen",
+    "Preis gültig im Aktionszeitraum",
+  }
+  ki_artifacts = {"Hintergrund KI-generiert", "KI-generiert"}
+  trademark_indicators = {"©", "Licensed by", "Licensed through", "trademarks", "™ designate"}
+  kundenmonitor_indicators = {"ServiceBarometer", "Kundenmonitor", "NielsenIQ"}
+  address = {"ALDI SÜD Dienstleistungs", "Burgstraße 37", "Burgstr. 37"}
+  linefilter_drop_cnt: int = 0
   for img_src, alt_text in output_img_dict.items():
-    for line in alt_text.splitlines():
+    filtered_lines: list[str] = []
+    for ln in alt_text.splitlines():
+      line = ln.lower()
       if not line.strip():
-        # ignore empty lines
-        continue
-      legal_boilerplate = {
-        "Aktionsartikel im Unterschied",
-        "begrenzter Anzahl zur Verfügung",
-        "Aktionsbeginn ausverkauft",
-        "Alle Artikel ohne Dekoration",
-        "Artikel teilweise mit Serviervorschlägen",
-        "Preis gültig im Aktionszeitraum",
-      }
-      if any(p in line for p in legal_boilerplate):
-        # ignore legal boilerplate lines
         continue
       if "Haltungsform" in line and ("Umstellungsphase" in line or "Kennzeichnung" in line):
-        # ignore haltungsform lines
         continue
-      if "ALDI SÜD Dienstleistungs" in line or "Burgstraße 37" in line or "Burgstr. 37" in line:
-        # ignore aldi_address lines
+      if any(e.lower() in line for e in address):
         continue
-
-  #
-  # aldi_address "ALDI SÜD Dienstleistungs" in line or "Burgstraße 37" in line or "Burgstr. 37" in line
-  # ki_artifacts "Hintergrund KI-generiert", "KI-generiert"
-  # trademark any(ind in line for ind in indicators) "©", "Licensed by", "Licensed through", "trademarks", "™ designate"
-  # kundenmonitor "ServiceBarometer", "Kundenmonitor", "NielsenIQ"
+      if any(e.lower() in line for e in ki_artifacts):
+        continue
+      if any(e.lower() in line for e in legal_boilerplate):
+        continue
+      if any(e.lower() in line for e in trademark_indicators):
+        continue
+      if any(e.lower() in line for e in kundenmonitor_indicators):
+        continue
+      filtered_lines.append(line)
+    linefilter_drop_cnt += len(alt_text.splitlines()) - len(filtered_lines)
+    output_img_dict[img_src] = "\n".join(filtered_lines)
 
   # 6. NORMALIZE TEXT
   # normalize_alt_text
@@ -204,6 +210,7 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
         "input_alt_text_lines": input_alt_text_lines,
         "input_food_keyword_cnt": input_food_keyword_cnt,
         "input_nonfood_keyword_cnt": input_nonfood_keyword_cnt,
+        "linefilter_drop_cnt": linefilter_drop_cnt,
         "output_img_cnt": output_img_cnt,
         "output_alt_text_bytes": output_alt_text_bytes,
         "output_alt_text_lines": output_alt_text_lines,
