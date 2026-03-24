@@ -71,22 +71,34 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
   #     __        __   ___     ___        ___  ___  __   __
   #    |__)  /\  / _` |__     |__  | |     |  |__  |__) /__`
   #    |    /~~\ \__> |___    |    | |___  |  |___ |  \ .__/
-  # 1. FILTER OUT ALDI-TRAVEL PAGES ENTIRELY
-
-  # 2. FILTER OUT ALDI-TALK PAGES ENTIRELY
-
-  # 3. FILTER OUT ALDI-AWARDS PAGES ENTIRELY
-
-  # 4. FILTER OUT NON-FOOD PAGES ENTIRELY
   keys_to_remove: list[str] = []
   for img_src, alt_text in output_img_dict.items():
-    nonfood_hits: int = sum(alt_text.lower().count(keywrd.lower()) for keywrd in NON_FOOD_KEYWORDS)
-    food_hits: int = sum(alt_text.lower().count(keywrd.lower()) for keywrd in ALDI_FOOD_KEYWORDS)
-    if nonfood_hits >= 2 and food_hits == 0:
-      keys_to_remove.append(img_src)
+    lowercase_alt_txt = alt_text.lower()
+    nonfood_hits: int = sum(lowercase_alt_txt.count(keywrd.lower()) for keywrd in NON_FOOD_KEYWORDS)
+    travel_hits: int = sum(lowercase_alt_txt.count(keywrd.lower()) for keywrd in ALDI_TRAVEL_MARKERS)
+    talk_hits: int = sum(lowercase_alt_txt.count(keywrd.lower()) for keywrd in ALDI_TALK_KEYWORDS)
+    awards_hits: int = sum(lowercase_alt_txt.count(keywrd.lower()) for keywrd in ALDI_AWARDS_KEYWORDS)
+    food_hits: int = sum(lowercase_alt_txt.count(keywrd.lower()) for keywrd in ALDI_FOOD_KEYWORDS)
+    if img_src not in keys_to_remove:
+      # 1. FILTER OUT ALDI-TRAVEL PAGES ENTIRELY
+      if travel_hits >= 1 and food_hits == 0:
+        logger.debug(f"[PAGE-FILTER] ALDI-TRAVEL page marked for removal from output_img_dict ({img_src})")
+        keys_to_remove.append(img_src)
+      # 2. FILTER OUT ALDI-TALK PAGES ENTIRELY
+      elif talk_hits >= 1 and food_hits == 0:
+        logger.debug(f"[PAGE-FILTER] ALDI-TALK page marked for removal from output_img_dict ({img_src})")
+        keys_to_remove.append(img_src)
+      # 3. FILTER OUT ALDI-AWARDS PAGES ENTIRELY
+      elif awards_hits >= 1 and food_hits == 0:
+        logger.debug(f"[PAGE-FILTER] ALDI-AWARDS page marked for removal from output_img_dict ({img_src})")
+        keys_to_remove.append(img_src)
+      # 4. FILTER OUT NON-FOOD PAGES ENTIRELY
+      elif nonfood_hits >= 2 and food_hits == 0:
+        logger.debug(f"[PAGE-FILTER] NON-FOOD page marked for removal from output_img_dict ({img_src})")
+        keys_to_remove.append(img_src)
   for key in keys_to_remove:
-    logger.debug(f"[PAGE-FILTER] NON-FOOD page will be removed from output_img_dict ({key})")
     del output_img_dict[key]
+
   #                 ___     ___        ___  ___  __   __
   #    |    | |\ | |__     |__  | |     |  |__  |__) /__`
   #    |___ | | \| |___    |    | |___  |  |___ |  \ .__/
