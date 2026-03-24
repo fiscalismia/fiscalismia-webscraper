@@ -50,11 +50,13 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
     input_alt_texts: dict = input_img_dict.values()
     input_alt_text_bytes: int = sum(len(v) for v in input_alt_texts)
     # fmt: off
+    # Count all food keyword occurences across the entire dataset /w list comprehension
     input_food_keyword_cnt: int = sum(
       alt_text.lower().count(keywrd.lower())
       for keywrd in ALDI_FOOD_KEYWORDS
       for alt_text in input_alt_texts
     )
+    # Count all nonfood keyword occurences across the entire dataset /w list comprehension
     input_nonfood_keyword_cnt: int = sum(
       alt_text.lower().count(keywrd.lower())
       for keywrd in NON_FOOD_KEYWORDS
@@ -69,14 +71,22 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
   #     __        __   ___     ___        ___  ___  __   __
   #    |__)  /\  / _` |__     |__  | |     |  |__  |__) /__`
   #    |    /~~\ \__> |___    |    | |___  |  |___ |  \ .__/
-  # 1. FILTER OUT NON-FOOD PAGES ENTIRELY
+  # 1. FILTER OUT ALDI-TRAVEL PAGES ENTIRELY
 
-  # 2. FILTER OUT ALDI-TRAVEL PAGES ENTIRELY
+  # 2. FILTER OUT ALDI-TALK PAGES ENTIRELY
 
-  # 3. FILTER OUT ALDI-TALK PAGES ENTIRELY
+  # 3. FILTER OUT ALDI-AWARDS PAGES ENTIRELY
 
-  # 4. FILTER OUT ALDI-AWARDS PAGES ENTIRELY
-
+  # 4. FILTER OUT NON-FOOD PAGES ENTIRELY
+  keys_to_remove: list[str] = []
+  for img_src, alt_text in output_img_dict.items():
+    nonfood_hits: int = sum(alt_text.lower().count(keywrd.lower()) for keywrd in NON_FOOD_KEYWORDS)
+    food_hits: int = sum(alt_text.lower().count(keywrd.lower()) for keywrd in ALDI_FOOD_KEYWORDS)
+    if nonfood_hits >= 2 and food_hits == 0:
+      keys_to_remove.append(img_src)
+  for key in keys_to_remove:
+    logger.debug(f"[PAGE-FILTER] NON-FOOD page will be removed from output_img_dict ({key})")
+    del output_img_dict[key]
   #                 ___     ___        ___  ___  __   __
   #    |    | |\ | |__     |__  | |     |  |__  |__) /__`
   #    |___ | | \| |___    |    | |___  |  |___ |  \ .__/
