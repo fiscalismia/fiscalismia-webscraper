@@ -214,3 +214,5 @@ pip_system_certs-5.3-py3-none-any.whl
 pip.ini
 ./pip/
 scrape_results/
+scrape_test/
+api/scraping/aldi_prospekt_13919dd8-f468-4ceb-bfce-0a9ee1ca9cf0.json

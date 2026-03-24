@@ -121,7 +121,12 @@ async def start_etl_on_aldi_results(session_id: str):
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Filepath not validated: {str(e)}")
   if session_id in browser.sessions:
     raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Scraping in progress")
-  return await etl_aldi_prospekt(session_id, filepath)
+  try:
+    etl_result = await etl_aldi_prospekt(session_id, filepath)
+  except Exception as e:
+    logger.error(f"ETL Aldi Prospekt failed: {e}")
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"ETL Aldi Prospekt failed: {str(e)}")
+  return etl_result
 
 
 # TODO: Remove
@@ -129,4 +134,9 @@ async def start_etl_on_aldi_results(session_id: str):
 async def test_etl():
   """Use scraping results as input for running sanitization and transformations for a given session."""
   logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/etl/alditest received a query")
-  return await etl_aldi_prospekt("test", "test", False)
+  try:
+    etl_result = await etl_aldi_prospekt("test", "test", False)
+  except Exception as e:
+    logger.error(f"ETL Aldi Prospekt failed: {e}")
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"ETL Aldi Prospekt failed: {str(e)}")
+  return etl_result

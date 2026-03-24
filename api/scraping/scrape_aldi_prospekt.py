@@ -137,6 +137,7 @@ async def scrape_aldi_prospekt(
   await page.evaluate(f"document.querySelector('{query_selector}').removeAttribute(\"target\")")
   await link.click()
   await page.wait_for_load_state(PLAYWRIGHT_STATE_LOADED, timeout=TIMEOUT_SEC_DEFAULT)
+  prospekt_url = page.url
   await asyncio.sleep(1)
 
   # 5. Extract total pagecount of prospekt to limit
@@ -170,7 +171,7 @@ async def scrape_aldi_prospekt(
   # Navigate in a loop to next page until the end has been reached - rate limit self to avoid spam
   construct_prospekt_page_urls(current_url, total_pages, prospekt_page_urls)
   for prospekt_page in prospekt_page_urls:
-    if prospekt_page.endswith("/10-11"):
+    if prospekt_page.endswith("/6-7"):
       logger.debug("Ending early during test and development")
       break
     try:
@@ -208,10 +209,10 @@ async def scrape_aldi_prospekt(
       return respond_with_error(session_id, page.url, "PDF download was requested but failed.")
 
   return ScrapeResult(
-    status="success",
+    status="scraped",
     session_id=session_id,
     target_url=url,
-    prospekt_url=page.url,
+    prospekt_url=prospekt_url,
     timestamp=timestamp,
     data={
       "prospekt_images_src_alt_dict": prospekt_images_src_alt_dict,
