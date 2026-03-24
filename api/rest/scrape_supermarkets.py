@@ -14,6 +14,10 @@ from api.config import BROWSER_VIEWPORT_WIDTH, BROWSER_VIEWPORT_HEIGHT, SCRAPE_R
 from api.scraping.scrape_aldi_prospekt import scrape_aldi_prospekt
 from api.scraping.etl_aldi_prospekt import etl_aldi_prospekt
 
+from api.scraping import (
+  validate_filepath,
+)
+
 router = APIRouter()
 
 # prevent GC of background scraping tasks
@@ -110,9 +114,19 @@ async def get_scrape_results(session_id: str):
 async def start_etl_on_aldi_results(session_id: str):
   """Use scraping results as input for running sanitization and transformations for a given session."""
   logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/etl/aldi/{session_id} received a query")
-  filepath = os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json")
-  if not os.path.isfile(filepath):
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Results JSON for session not found")
+  try:
+    filepath = validate_filepath(os.path.join(SCRAPE_RESULTS_DIR, f"aldi_prospekt_{session_id}.json"))
+  except Exception as e:
+    logger.error(f"Filepath validation failed: {e}")
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Filepath not validated: {str(e)}")
   if session_id in browser.sessions:
     raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Scraping in progress")
   return await etl_aldi_prospekt(session_id, filepath)
+
+
+# TODO: Remove
+@router.post("/cdp/scrape/etl/alditest")
+async def test_etl():
+  """Use scraping results as input for running sanitization and transformations for a given session."""
+  logger.debug(f"POST route {BASE_ROUTE}{REST_ENDPOINT}/cdp/scrape/etl/alditest received a query")
+  return await etl_aldi_prospekt("test", "test", False)

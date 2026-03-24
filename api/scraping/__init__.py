@@ -1,7 +1,9 @@
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pydantic import BaseModel
 from api.logger import logger
+from api.config import SCRAPE_RESULTS_DIR
 
 # DISCOURAGED: can be unreliable when injected analytics/tracking send persistent queries
 PLAYWRIGHT_STATE_NETWORK_IDLE = "networkidle"
@@ -9,6 +11,9 @@ PLAYWRIGHT_STATE_LOADED = "domcontentloaded"
 
 ### SANITIZATION OF SCRAPED INPUTS ###
 NON_FOOD_KEYWORDS = {
+  "Heißluftfritteuse",
+  "Edelstahl",
+  "Pfannenwender",
   "Spannbetttuch",
   "Nachtwäsche",
   "Strumpfhosen",
@@ -42,6 +47,40 @@ class ScrapeResult(BaseModel):
   prospekt_url: str | None = None
   timestamp: str
   data: dict | None = None
+
+
+def validate_filepath(filepath: str, allowed_extensions: list[str] = [".json"]) -> str:
+  """Resolve and validate the file path against path traversal attacks.
+  - os.path.realpath() resolves symlinks and '..' components,
+    directory traversal payloads like '../../etc/shadow'.
+  - We then check the resolved path starts with our trusted base dir.
+  """
+  MAX_FILE_SIZE_BYTES = 1024 * 1024
+  # Resolve to canonical absolute path (follows symlinks, resolves ..)
+  resolved = os.path.realpath(filepath)
+
+  # Ensure resolved path is under the allowed base directory
+  # os.path.commonpath would also work, but prefix check on
+  # realpath output is the standard pattern
+  if not resolved.startswith(os.path.realpath(SCRAPE_RESULTS_DIR) + os.sep):
+    raise ValueError(f"ValueError: Path escapes allowed base directory: {filepath!r} -> {resolved!r}")
+
+  # Extension check
+  _, ext = os.path.splitext(resolved)
+  if ext.lower() not in allowed_extensions:
+    raise ValueError(f"ValueError: Disallowed file extension: {ext!r}")
+
+  # Existence and size checks
+  if not os.path.isfile(resolved):
+    raise FileNotFoundError(f"FileNotFoundError: No file at resolved path: {resolved!r}")
+
+  file_size = os.path.getsize(resolved)
+  if file_size > MAX_FILE_SIZE_BYTES:
+    raise ValueError(f"ValueError: File too large: {file_size:,} bytes (limit: {MAX_FILE_SIZE_BYTES:,})")
+  if file_size == 0:
+    raise ValueError("ValueError: File is empty")
+
+  return resolved
 
 
 def get_current_week_pattern() -> str:
