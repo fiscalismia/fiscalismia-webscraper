@@ -42,12 +42,25 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
   try:
     input_img_dict: dict = input["data"]["prospekt_images_src_alt_dict"]
     output_img_dict: dict = input_img_dict
-
     #     __  ___      ___    __  ___    __   __
     #    /__`  |   /\   |  | /__`  |  | /  ` /__`    | |\ |
     #    .__/  |  /~~\  |  | .__/  |  | \__, .__/    | | \|
-    input_img_cnt: int = len(list(input_img_dict.keys()))
-    input_alt_text_bytes: int = sum(len(v) for v in input_img_dict.values())
+    input_imgs: dict = input_img_dict.keys()
+    input_img_cnt: int = len(list(input_imgs))
+    input_alt_texts: dict = input_img_dict.values()
+    input_alt_text_bytes: int = sum(len(v) for v in input_alt_texts)
+    # fmt: off
+    input_food_keyword_cnt: int = sum(
+      alt_text.lower().count(keywrd.lower())
+      for keywrd in ALDI_FOOD_KEYWORDS
+      for alt_text in input_alt_texts
+    )
+    input_nonfood_keyword_cnt: int = sum(
+      alt_text.lower().count(keywrd.lower())
+      for keywrd in NON_FOOD_KEYWORDS
+      for alt_text in input_alt_texts
+    )
+    # fmt: on
   except KeyError as e:
     raise ValueError(f"Missing expected key in JSON structure: {e}") from e
   except TypeError as e:
@@ -85,6 +98,12 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
 
   output_img_cnt: int = len(list(output_img_dict.keys()))
   output_alt_text_bytes: int = sum(len(v) for v in output_img_dict.values())
+  output_food_keyword_cnt: int = sum(
+    alt_text.lower().count(keywrd.lower()) for keywrd in ALDI_FOOD_KEYWORDS for alt_text in output_img_dict.values()
+  )
+  output_nonfood_keyword_cnt: int = sum(
+    alt_text.lower().count(keywrd.lower()) for keywrd in NON_FOOD_KEYWORDS for alt_text in output_img_dict.values()
+  )
   #                       ___  __             __   ___  __   __
   #    |    |     |\/|     |  |__)  /\  |\ | /__` |__  /  \ |__)  |\/|
   #    |___ |___  |  |     |  |  \ /~~\ | \| .__/ |    \__/ |  \  |  |
@@ -137,8 +156,12 @@ async def etl_aldi_prospekt(session_id: str, filepath: str, query_llm: bool = Fa
       "etl_statistics": {
         "input_img_cnt": input_img_cnt,
         "input_alt_text_bytes": input_alt_text_bytes,
+        "input_food_keyword_cnt": input_food_keyword_cnt,
+        "input_nonfood_keyword_cnt": input_nonfood_keyword_cnt,
         "output_img_cnt": output_img_cnt,
         "output_alt_text_bytes": output_alt_text_bytes,
+        "output_food_keyword_cnt": output_food_keyword_cnt,
+        "output_nonfood_keyword_cnt": output_nonfood_keyword_cnt,
       },
       "prospekt_images_src_alt_dict": output_img_dict,
       "optional_pdf_filepath": input["data"]["optional_pdf_filepath"],
