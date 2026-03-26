@@ -187,13 +187,6 @@ jobs:
         echo "Production Image pushed to ${{ steps.push-prod-to-ghcr.outputs.registry-paths }}"
         echo "Demo Image pushed to ${{ steps.push-demo-to-ghcr.outputs.registry-paths }}"
 
-    - name: Print build success (PR)
-      if: github.event_name == 'pull_request'
-      run: |
-        echo "Build successful for PR"
-        echo "Demo Image would be: ${{ steps.build-demo-image.outputs.image }}:${{ steps.build-demo-image.outputs.tags }}"
-        echo "Production Image would be: ${{ steps.build-production-image.outputs.image }}:${{ steps.build-production-image.outputs.tags }}"
-
   snyk-container-scan:
     needs: build-and-publish-image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
