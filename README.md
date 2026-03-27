@@ -1,6 +1,6 @@
 # fiscalismia-webscraper
-Playwright browser automation running on a remote VM, exposing live recording stream of the browser interaction via WebSocket API call.
-Backend is a very basic dockerized FastAPI server exposing routes protected via jwt authentication.
+Playwright browser automation running on a remote VM, exposing live recording stream of the browser interaction via WebSocket API call -  the browser session is captures as jpeg screenshots of headless CDP browser sessions and sent as binary encoded packets to the client, rendering blobs into a canvas as ImageBitmaps. Webscraping targets are german supermarket chains, extracting food item discounts from their leaflets via alt-text extraction, OCR image parsing with subsequent ETL data pipelines sanitizing the data. The sanitized data is passed as unstructured text inputs to an LLM API Endpoint for transformation into a structured JSON payload for later database insertion via SQL generated in the main fiscalismia-backend.
+The Python Backend is a very basic dockerized FastAPI server behind an nginx reverse-proxy, exposing routes protected via jwt authentication.
 
 **Performance Tuning:**
 - Uvicorn is configured with `--loop uvloop` (see `supervisord.conf` and `main.py`). uvloop is a drop-in replacement for Python's default asyncio event loop, provides 2-4x faster I/O scheduling, built on libuv (the same C library behind Node.js). Once installed via the `--loop` flag, it globally replaces the asyncio event loop for the entire process — all `asyncio.Queue`, `asyncio.wait_for`, `await` calls etc. run on uvloop automatically without code changes.
