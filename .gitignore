@@ -136,6 +136,9 @@ celerybeat.pid
 
 # Environments
 .env
+backend.env
+database.env
+webscraper.env
 .envrc
 .venv
 env/

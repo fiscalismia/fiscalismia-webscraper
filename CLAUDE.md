@@ -63,11 +63,6 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 - `POST /fastapi/fiscalismia/rest/cdp/start` — create CDP session (JWT-protected)
 - `WS /fastapi/fiscalismia/ws/session/{id}?token=<jwt>` — screencast stream (query param auth)
 
-**Tests (`tests/`):**
-- `test_ws.py` — End-to-end integration test for the CDP streaming endpoints (POST start + WebSocket frame reception)
-- `test_mouse_interpolation.py` — Unit tests for Bezier interpolation, easing, path generation, timing delays
-- `test_stealth_patches.py` — Unit tests for stealth browser args, JS patches, and apply_stealth coroutine
-
 **Container architecture:** Supervisor manages two processes:
 - Nginx (port 8444 SSL with PROXY protocol v2) → reverse proxies to Uvicorn (port 3003, internal)
 - Nginx splits traffic into three location blocks: `/fastapi/fiscalismia/ws/` (WebSocket streaming, zero-buffering, gzip off, 1h timeouts), `/fastapi/fiscalismia/rest/` (REST, buffered, gzip on), `/` (catch-all for health checks)

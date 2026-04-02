@@ -14,7 +14,17 @@ from api.rest.scrape_supermarkets import router as scrape_supermarkets_router
 from api.websockets.stream_cdp import router as stream_cdp_websocket_router
 from api.logger import set_global_log_level as log_level
 from api.config import SCRAPE_RESULTS_DIR, SCRAPE_RESULTS_TTL_SECONDS
+from api.logger import logger
 from api import browser
+from dotenv import load_dotenv
+from pathlib import Path
+
+_secrets_path = Path("/run/secrets/.env")
+if _secrets_path.is_file():
+  load_dotenv(_secrets_path)
+  logger.debug("env file successfully loaded from volume mount.")
+else:
+  logger.critical(".env file could not be loaded from volume mount.")
 
 app_version = os.environ.get("APP_VERSION", "local-development")
 decoding_secret = os.environ.get("JWT_SECRET", None)
