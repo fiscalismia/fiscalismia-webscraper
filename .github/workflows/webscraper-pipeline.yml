@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout SCM
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6.0.2
 
     - name: Set up Python
       uses: actions/setup-python@v6.2.0
@@ -35,7 +35,7 @@ jobs:
 
     steps:
     - name: Checkout SCM
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6.0.2
       # https://github.com/actions/checkout
 
     - name: Set up Python
@@ -99,7 +99,7 @@ jobs:
 
     steps:
     - name: Checkout SCM
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6.0.2
       # https://github.com/actions/checkout
 
     - name: Read Version from pyproject.toml
@@ -199,7 +199,7 @@ jobs:
 
     steps:
     - name: Checkout SCM
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6.0.2
       # https://github.com/actions/checkout
 
     - name: Log in to Github Container Registry
