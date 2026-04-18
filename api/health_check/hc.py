@@ -25,7 +25,7 @@ async def health_check():
   uptime_hours = round(uptime.total_seconds() / 3600, 2)
   return {
     "status": "OK",
-    "app_version": app_version,
+    "version": app_version,
     "service": "fiscalismia-webscraper",
     "purpose": "Python FastAPI /w Playwright Browser for Live Webscraping",
     "timestamp": datetime.now(tz=ZoneInfo("Europe/Berlin")),
