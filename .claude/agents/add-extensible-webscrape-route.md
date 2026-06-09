@@ -9,8 +9,8 @@ Read `CLAUDE.md` at the project root for the full architecture, route map, tech 
 ### Existing flow (interactive)
 
 1. **Frontend** (`admin_WebscrapeSupermarkets.tsx`) passes a preset URL (`https://www.aldi-sued.de/prospekte`) to `Websocket_CDP_Canvas.tsx`.
-2. `Websocket_CDP_Canvas` calls `POST /fastapi/fiscalismia/rest/cdp/start` with the target URL → backend launches a stealth Chromium page, navigates to the URL, starts CDP screencast, returns a `session_id`.
-3. Frontend opens `WS /fastapi/fiscalismia/ws/session/{session_id}`, authenticates with a JWT token, and streams JPEG frames to canvas. User input (mouse clicks, moves, scrolls) is sent back over WebSocket as JSON and dispatched server-side via CDP.
+2. `Websocket_CDP_Canvas` calls `POST /fastapi/rest/cdp/start` with the target URL → backend launches a stealth Chromium page, navigates to the URL, starts CDP screencast, returns a `session_id`.
+3. Frontend opens `WS /fastapi/ws/session/{session_id}`, authenticates with a JWT token, and streams JPEG frames to canvas. User input (mouse clicks, moves, scrolls) is sent back over WebSocket as JSON and dispatched server-side via CDP.
 
 This is a **manual, interactive** session where the user drives the remote browser through the canvas. The new feature adds **server-side automated scraping** that runs without user interaction but still streams progress to the same canvas.
 
@@ -40,7 +40,7 @@ Create a new **JWT-protected REST endpoint** that automates browser interaction 
 #### New route
 
 - Create a new router module in path: `api/rest/scrape_supermarkets.py`
-- Suggested endpoint: `POST /fastapi/fiscalismia/rest/cdp/scrape/supermarket/aldi_prospekt`
+- Suggested endpoint: `POST /fastapi/rest/cdp/scrape/supermarket/aldi_prospekt`
 - JWT-protected at the router level via `dependencies=[Depends(JWTBearer())]`, consistent with existing patterns.
 - The route should return a `session_id` (same as the existing `/cdp/start` endpoint) so the frontend can connect via the existing WebSocket to watch the automation in real time through the canvas.
 - Register the new router in `api/main.py` with a prefix constant defined in `api/config.py`.
@@ -67,7 +67,7 @@ This is the **first of many scraping automations**. Structure the code so that:
 The WebSocket remains a **pure binary JPEG screencast stream**. Do not add JSON messages, text frames, or mixed-type payloads to the WebSocket protocol. Scraped data is delivered separately via REST:
 
 1. **During scraping**, the automation function writes its results to a JSON temp file on disk. File naming convention: `{route_identifier}_{session_id}.json` (e.g. `aldi_prospekt_abc123.json`). Store these in a dedicated temp directory e.g. `./tmp/scrape_results/` which is mounted as tempfs so as ram in docker compose
-2. **Signaling completion**: The scraping automation endpoint's initial POST response should include a `results_url` field alongside `session_id`, pointing to a new JWT-protected GET endpoint (e.g. `GET /fastapi/fiscalismia/rest/cdp/scrape/results/{session_id}`). The frontend fetches this URL via user button manually once the WebSocket session closes (which signals the automation finished).
+2. **Signaling completion**: The scraping automation endpoint's initial POST response should include a `results_url` field alongside `session_id`, pointing to a new JWT-protected GET endpoint (e.g. `GET /fastapi/rest/cdp/scrape/results/{session_id}`). The frontend fetches this URL via user button manually once the WebSocket session closes (which signals the automation finished).
 3. **The results endpoint** is rest. reads the temp file, returns its contents as JSON, signals error via http status
 4. **Lifecycle / cleanup**: Register a cleanup routine — either in the FastAPI lifespan shutdown handler or as a background task — that removes orphaned temp files older than a config variable TTL (e.g. 15 minutes).
 5. **Data schema**: For now, define a minimal result model (e.g. `ScrapeResult` with fields like `status`, `session_id`, `target_url`, `prospekt_url`, `timestamp`, and a generic `data: dict | None` for future extracted content). Return this from the results endpoint.

@@ -2,7 +2,7 @@
 FASTAPI_GLOBAL_TIMEOUT_SECONDS = 90
 
 ### ROUTES ###
-BASE_ROUTE = "/fastapi/fiscalismia"
+BASE_ROUTE = "/fastapi"
 REST_ENDPOINT = "/rest"
 WEBSOCKET_ENDPOINT = "/ws"
 

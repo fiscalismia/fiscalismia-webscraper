@@ -58,14 +58,14 @@ podman run --env-file .env --rm -it -p 3003:3003 \
 
 **Route map (prefixes defined in `api/config.py`):**
 - `GET /` — root info (unprotected)
-- `GET /fastapi/fiscalismia/hc` — health check (unprotected)
-- `GET /fastapi/fiscalismia/version` — version (unprotected)
-- `POST /fastapi/fiscalismia/rest/cdp/start` — create CDP session (JWT-protected)
-- `WS /fastapi/fiscalismia/ws/session/{id}?token=<jwt>` — screencast stream (query param auth)
+- `GET /fastapi/hc` — health check (unprotected)
+- `GET /fastapi/version` — version (unprotected)
+- `POST /fastapi/rest/cdp/start` — create CDP session (JWT-protected)
+- `WS /fastapi/ws/session/{id}?token=<jwt>` — screencast stream (query param auth)
 
 **Container architecture:** Supervisor manages two processes:
 - Nginx (port 8444 SSL with PROXY protocol v2) → reverse proxies to Uvicorn (port 3003, internal)
-- Nginx splits traffic into three location blocks: `/fastapi/fiscalismia/ws/` (WebSocket streaming, zero-buffering, gzip off, 1h timeouts), `/fastapi/fiscalismia/rest/` (REST, buffered, gzip on), `/` (catch-all for health checks)
+- Nginx splits traffic into three location blocks: `/fastapi/ws/` (WebSocket streaming, zero-buffering, gzip off, 1h timeouts), `/fastapi/rest/` (REST, buffered, gzip on), `/` (catch-all for health checks)
 - External ingress: HAProxy (port 443) → Nginx (port 8444) via TLS passthrough with SNI routing and PROXY protocol v2
 
 ## Environment Variables
