@@ -23,7 +23,7 @@ async def launch_client() -> AsyncAnthropic:
   """Initialize the shared Claude client on demand during workflows."""
   global _anthropic_client
   _anthropic_client = AsyncAnthropic(
-    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+    api_key=os.environ.get("ANTHROPIC_PLAYWRIGHT_API_KEY"),
     http_client=DefaultAioHttpClient(),
   )
 
